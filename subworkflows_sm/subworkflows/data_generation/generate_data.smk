@@ -1,6 +1,6 @@
 
-include: "../helper_processes.smk"
-rule convert_sc = rules.convert_between_rds_and_h5ad
+# include: "../helper_processes.smk"
+# rule convert_sc = rules.convert_between_rds_and_h5ad
 
 # Initialization: possible dataset types
 synthspot_types_map = {
@@ -24,4 +24,7 @@ synthspot_types_fullnames = list(synthspot_types_map.values())
 synthspot_types_flat = synthspot_types_flat = [item for sublist in synthspot_types_map.items() for item in sublist] #All key and values in a list
 
 rule test: 
-    print(synthspot_types_fullnames)
+    run:
+        print(f"Parameter 1: {synthspot_types_flat}")
+        print(f"Parameter 1: {synthspot_types_fullnames}")
+        print(f"Parameter 1: {synthspot_types_map}")
