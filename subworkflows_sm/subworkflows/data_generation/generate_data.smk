@@ -1,6 +1,6 @@
 
-include: "../helper_processes.smk"
-rule convert_sc = rules.convert_between_rds_and_h5ad
+# include: "../helper_processes.smk"
+# rule convert_sc = rules.convert_between_rds_and_h5ad
 
 # Initialization: possible dataset types
 synthspot_types_map = {
