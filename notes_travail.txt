@@ -1,0 +1,9 @@
+
+
+le fichier main.nf est le fichier principal de la pipeline, il contient l allep à  la méthode runmethods 
+da la pipeline auxiiaire run_methods.nf. 
+
+run_methods.nf fait appel à la méthode de run de la méthode prise en parametre qui est definie dans 
+subworkflows/deconvolution/$methode/run_method.nf definie pour chaque methode.
+
+lancer les calculs sur Sila.
