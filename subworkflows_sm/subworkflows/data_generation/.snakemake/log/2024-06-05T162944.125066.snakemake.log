@@ -1,0 +1,36 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Singularity containers: ignored
+Job stats:
+job                      count
+---------------------  -------
+generateSyntheticData        1
+total                        1
+
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Jun  5 16:29:44 2024]
+localrule generateSyntheticData:
+    input: ../../../unit-test/test_sp_data.rds
+    output: path/to/synthetic/data/test_sp_data_artificial_uniform_distinct_rep1.rds
+    jobid: 0
+    reason: Missing output files: path/to/synthetic/data/test_sp_data_artificial_uniform_distinct_rep1.rds
+    resources: tmpdir=/tmp
+
+RuleException:
+NameError in file /home/abderahim/spotless_depot/spotless-benchmark-snakemaked/spotless-benchmark/subworkflows_sm/subworkflows/data_generation/generate_data.smk, line 59:
+The name 'sc_input_type' is unknown in this context. Please make sure that you defined that variable. Also note that braces not used for variable access have to be escaped by repeating them, i.e. {{print $1}}
+[Wed Jun  5 16:29:44 2024]
+Error in rule generateSyntheticData:
+    jobid: 0
+    input: ../../../unit-test/test_sp_data.rds
+    output: path/to/synthetic/data/test_sp_data_artificial_uniform_distinct_rep1.rds
+
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: .snakemake/log/2024-06-05T162944.125066.snakemake.log
+WorkflowError:
+At least one job did not complete successfully.

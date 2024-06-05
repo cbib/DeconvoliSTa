@@ -1,0 +1,6 @@
+Building DAG of jobs...
+MissingInputException in rule generateSyntheticData in file /home/abderahim/spotless_depot/spotless-benchmark-snakemaked/spotless-benchmark/subworkflows_sm/subworkflows/data_generation/generate_data.smk, line 45:
+Missing input files for rule generateSyntheticData:
+    output: path/to/synthetic/data/test_sp_data_rds_rep1.rds, path/to/synthetic/data/test_sp_data_rds_rep2.rds, path/to/synthetic/data/test_sp_data_rds_rep3.rds, path/to/synthetic/data/test_sp_data_rds_rep4.rds, path/to/synthetic/data/test_sp_data_rds_rep5.rds
+    affected files:
+        unit-test/test_sp_data.rds
