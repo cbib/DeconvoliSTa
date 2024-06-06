@@ -11,7 +11,7 @@ def build_cell2location_model(sc_input, params):
         params (dict): Parameters for building the model.
     """
     tag_suffix = sc_input.split('/')[-1]
-    sample_id_arg = f"-s {params['sampleID']}" if params['sampleID'] != "none" else ""
+    sample_id_arg = f"-s {config['sampleID']}" if config['sampleID'] != "none" else ""
     epochs = f"-e {params['epoch_build']}" if params['epoch_build'] != "default" else ""
     args = params.get('deconv_args', {}).get('cell2location', {}).get('build', "")
     cuda_device = params['cuda_device'] if params['gpu'] else "cpu"
