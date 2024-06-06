@@ -74,5 +74,5 @@ def fit_cell2location_model(sp_input, model, params):
 
 
 
-if __name__ == "__main__":
+# if __name__ == "__main__":
     
