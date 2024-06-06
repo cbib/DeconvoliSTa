@@ -37,7 +37,7 @@ def main():
 
     assert (cuda_device.isdigit() or cuda_device == "cpu"), "invalid device id"
     print("this is args.sc_data_pat", args.sc_data_path)
-    assert os.path.exists(args.sc_data_path), "sc file not found"
+    assert os.path.exists(args.sc_data_path), "args.sc_data_path sc file not found"
 
     if args.out_dir is None:
         output_folder = os.path.dirname(args.sc_data_path) + '/cell2location_results/'
