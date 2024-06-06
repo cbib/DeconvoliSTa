@@ -25,6 +25,7 @@ library(Seurat)
 library(synthspot)
 
 seurat_obj_scRNA <- readRDS(par$sc_input)
+cat (seurat_obj_scRNA)
 if (!is.null(par$seed)) { set.seed(as.numeric(par$seed)) }
 if (par$dataset_type == "prior_from_data"){
     cat("Generating synthetic visium data from", par$sc_input, "with input composition as cell type priors...\n")
