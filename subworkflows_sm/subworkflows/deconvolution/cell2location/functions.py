@@ -77,5 +77,13 @@ def format_tsv(input_file, output_file, params):
     command = f"python format_script.py {input_file} -o {output_file}"
     subprocess.run(command, shell=True, check=True)
 
-# if __name__ == "__main__":
+if __name__ == "__main__":
+    import os
+    import sys  
+    # Récupérer tous les arguments de la ligne de commande
+    args = sys.argv
+    sc_input  = args[1]
+    print(sc_input)
+
     
+  
