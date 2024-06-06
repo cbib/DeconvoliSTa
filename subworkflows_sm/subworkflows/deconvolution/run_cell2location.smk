@@ -13,10 +13,10 @@ sc_input = config["sc_input"]
 sp_input = config["sp_input"]
 
 
-rule all:
-    input:
-        "sc.h5ad",
-        "proportions_cell2location_{output_suffix}{runID_props}.preformat"
+# rule all:
+#     input:
+#         "sc.h5ad",
+#         # "proportions_cell2location_{output_suffix}{runID_props}.preformat"
 
 rule build_cell2location:
     input:
