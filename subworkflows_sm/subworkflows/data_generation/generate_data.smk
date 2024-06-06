@@ -47,12 +47,12 @@ rule generateSyntheticData:
                basename= os.path.splitext(os.path.basename(config['sc_input']))[0],
                dataset_type=config['dataset_type'].split(','), 
                rep=range(1, int(config['reps']) + 1))
+    singularity: 
+        "docker://csangara/synthspot:latest"
     params:
         rootdir=config['rootdir'],
         reps=config['reps'],
         args= ' '.join([f"--{k} {v}" for k, v in config.items() if k not in ["dataset_type", "reps", "sc_input"]])
-    container: 
-        "csangara/synthspot:latest"
     shell:
         "python3  ./subworkflows_sm/subworkflows/data_generation/script.py {config}"
             
