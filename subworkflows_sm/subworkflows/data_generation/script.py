@@ -96,6 +96,7 @@ if __name__ == "__main__":
     print(f"Number of replicates per dataset type: {reps}")
     print(f"Arguments: {synthspot_args_input}")
 
+    import subprocess
     for dataset_type in synthspot_type_input:
         for rep in range(1, int(reps) + 1):
             output_file = f"{os.path.splitext(os.path.basename(sc_input))[0]}_{dataset_type}_rep{rep}.rds"
@@ -103,5 +104,7 @@ if __name__ == "__main__":
             if not os.path.exists(output_path):
                 print("this is the fiiiiiile", output_file)
                 # Ensure Snakemake knows about the generated files
-                shell(f"touch {output_path}")
+                # shell(f"touch {output_path}")
+                result = subprocess.run(['touch', '{output_file}'], capture_output=True, text=True)
+
                 generate_synthetic_data(sc_input_conv, dataset_type, rep, rootdir, "path/to/synthetic/data", synthspot_args_input)
