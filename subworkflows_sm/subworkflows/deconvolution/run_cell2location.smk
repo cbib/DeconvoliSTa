@@ -2,8 +2,8 @@
 
 import os
 import sys
-print('Original sys.path:', sys.path)
 sys.path.append('cell2location/')
+print('Original sys.path:', sys.path)
 from functions import build_cell2location_model, fit_cell2location_model
 
 # configfile: "config.yaml"
