@@ -11,12 +11,6 @@ from functions import build_cell2location_model, fit_cell2location_model
 # Préparez les chemins d'entrée/sortie
 sc_input = config["sc_input"]
 sp_input = config["sp_input"]
-# sp_input_rds = config["sp_input_rds"]
-
-# Define input paths
-sc_input = config["sc_input"]
-sp_input = config["sp_input"]
-sp_input_rds = config["sp_input_rds"]
 
 
 rule all:
@@ -40,7 +34,7 @@ rule fit_cell2location:
     output:
         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
     run:
-        fit_cell2location_model(input.sp_input, input.sp_input_rds, input.model, config)
+        fit_cell2location_model(input.sp_input, input.sp_input, input.model, config)
 
 rule format_c2l:
     input:
