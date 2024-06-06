@@ -29,7 +29,6 @@ rule build_cell2location:
 rule fit_cell2location:
     input:
         sp_input,
-        sp_input_rds,
         model="sc.h5ad"
     output:
         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
