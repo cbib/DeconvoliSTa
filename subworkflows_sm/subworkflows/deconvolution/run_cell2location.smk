@@ -3,7 +3,7 @@
 import os
 import sys
 sys.path.append('cell2location/')
-from functions import build_cell2location_model, fit_cell2location_model, format_tsv
+from functions import build_cell2location_model, fit_cell2location_model
 
 
 # Préparez les chemins d'entrée/sortie
@@ -49,12 +49,12 @@ rule fit_cell2location:
         fit_cell2location_model {sp_input}, {model}, {config}
         """
 
-rule format_c2l:
-    input:
-        "proportions_cell2location_{output_suffix}{runID_props}.preformat"
-    output:
-        "formatted_proportions_cell2location_{output_suffix}{runID_props}.tsv"
-    shell:
-        format_tsv(input, output, config)
+# rule format_c2l:
+#     input:
+#         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
+#     output:
+#         "formatted_proportions_cell2location_{output_suffix}{runID_props}.tsv"
+#     shell:
+#         format_tsv(input, output, config)
 
 
