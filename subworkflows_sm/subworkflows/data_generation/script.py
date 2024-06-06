@@ -87,7 +87,7 @@ if __name__ == "__main__":
             output_file = f"{os.path.splitext(os.path.basename(sc_input))[0]}_{dataset_type}_rep{rep}.rds"
             output_path = os.path.join("path/to/synthetic/data", output_file)
             if not os.path.exists(output_path):
+                print("this is the fiiiiiile", output_file)
                 generate_synthetic_data(sc_input_conv, dataset_type, rep, rootdir, "path/to/synthetic/data", synthspot_args_input)
                 # Ensure Snakemake knows about the generated files
-                print(output_file)
                 shell(f"touch {output_path}")
