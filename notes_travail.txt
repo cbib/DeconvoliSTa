@@ -7,3 +7,9 @@ run_methods.nf fait appel à la méthode de run de la méthode prise en parametr
 subworkflows/deconvolution/$methode/run_method.nf definie pour chaque methode.
 
 lancer les calculs sur Sila.
+
+
+nextflow run -profile local,docker subworkflows_sm/subworkflows/data_generation/generate_data.nf -c my_config.config
+
+
+snakemake -s subworkflows_sm/subworkflows/data_generation/generate_data.smk -c1 --config sc_input="unit-test/test_sp_data.rds" dataset_type="artificial_uniform_distinct" reps=1 rootdir="." --use-singularity
