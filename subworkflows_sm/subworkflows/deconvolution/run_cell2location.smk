@@ -9,7 +9,11 @@ from functions import build_cell2location_model, fit_cell2location_model
 # Préparez les chemins d'entrée/sortie
 sc_input = config["sc_input"]
 sp_input = config["sp_input"]
+import configparser
 
+# Lire le fichier de configuration Nextflow-like
+conf = configparser.ConfigParser()
+conf.read("my_config.config")
 
 # rule all:
 #     input:
