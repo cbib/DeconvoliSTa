@@ -27,7 +27,7 @@ def build_cell2location_model(sc_input):
     sample_id_arg = f"-s {params['sampleID']}" if params['sampleID'] != "none" else ""
     epochs = f"-e {params['epoch_build']}" if params['epoch_build'] != "default" else ""
     args = params.get('deconv_args', {}).get('cell2location', {}).get('build', "")
-    cuda_device = params['cuda_device'] if params['gpu'] else "cpu"
+    cuda_device = "cpu"
     output_dir = params.get('output_dir', '.')
     
     print(f"Building cell2location model with {'GPU' if params['gpu'] else 'CPU'}...")
@@ -55,7 +55,7 @@ def fit_cell2location_model(sp_input, model, params):
     output = f"proportions_cell2location_{output_suffix}{params['runID_props']}.preformat"
     epochs = f"-e {params['epoch_fit']}" if params['epoch_fit'] != "default" else ""
     args = params.get('deconv_args', {}).get('cell2location', {}).get('fit', "")
-    cuda_device = params['cuda_device'] if params['gpu'] else "cpu"
+    cuda_device = "cpu"
     output_dir = params.get('output_dir', '.')
     
     print(f"Fitting cell2location model from file {model} with {'GPU' if params['gpu'] else 'CPU'}...")
