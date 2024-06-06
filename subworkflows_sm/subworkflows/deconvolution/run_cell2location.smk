@@ -43,8 +43,10 @@ rule fit_cell2location:
         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
     singularity:
         "docker://csangara/sp_cell2location:latest"
-    run:
-        fit_cell2location_model(sp_input, model, config)
+    shell:
+        """
+        fit_cell2location_model {sp_input}, {model}, {config}
+        """
 
 rule format_c2l:
     input:
