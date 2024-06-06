@@ -5,9 +5,16 @@ import subprocess
 import configparser
 
 # Lire le fichier de configuration Nextflow-like
-conf = configparser.ConfigParser()
-conf.read("../my_config.config")
-params = conf["params"]
+# conf = configparser.ConfigParser()
+# conf.read("../my_config.config")
+# # params = conf["params"]
+
+import yaml
+
+# Lire le fichier de configuration YAML
+with open("my_config.yaml", "r") as config_file:
+    params = yaml.safe_load(config_file)
+
 def build_cell2location_model(sc_input):
     """
     Build cell2location model.
