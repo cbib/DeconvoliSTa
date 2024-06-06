@@ -73,3 +73,6 @@ def fit_cell2location_model(sp_input, model, params):
     subprocess.run(command, check=True)
 
 
+
+if __name__ == "__main__":
+    

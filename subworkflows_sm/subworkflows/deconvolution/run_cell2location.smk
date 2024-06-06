@@ -27,8 +27,13 @@ rule build_cell2location:
         "sc.h5ad"
     singularity:
         "docker://csangara/sp_cell2location:latest"
-    run:
-        build_cell2location_model(sc_input)
+    shell:
+        # build_cell2location_model(sc_input)
+        # "python -c "build_cell2location_model(sc_input)" "
+        """
+        build_cell2location_model {sc_input} 
+        """
+
 
 rule fit_cell2location:
     input:
@@ -46,10 +51,7 @@ rule format_c2l:
         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
     output:
         "formatted_proportions_cell2location_{output_suffix}{runID_props}.tsv"
-    singularity:
-        "docker://csangara/sp_cell2location:latest"
-    run:
+    shell:
         format_tsv(input, output.output, config)
-
 
 
