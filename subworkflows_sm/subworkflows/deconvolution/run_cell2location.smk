@@ -13,6 +13,12 @@ sc_input = config["sc_input"]
 sp_input = config["sp_input"]
 # sp_input_rds = config["sp_input_rds"]
 
+# Define input paths
+sc_input = config["sc_input"]
+sp_input = config["sp_input"]
+sp_input_rds = config["sp_input_rds"]
+
+
 rule all:
     input:
         "sc.h5ad",
@@ -29,9 +35,20 @@ rule build_cell2location:
 rule fit_cell2location:
     input:
         sp_input,
-        # sp_input_rds,
+        sp_input_rds,
         model="sc.h5ad"
     output:
         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
     run:
-        fit_cell2location_model(input.sp_input, input.sp_input, input.model, config)
+        fit_cell2location_model(input.sp_input, input.sp_input_rds, input.model, config)
+
+rule format_c2l:
+    input:
+        "proportions_cell2location_{output_suffix}{runID_props}.preformat"
+    output:
+        "formatted_proportions_cell2location_{output_suffix}{runID_props}.tsv"
+    run:
+        format_tsv(input.input, output.output, config)
+
+
+

@@ -3,7 +3,6 @@ nextflow.enable.dsl=2
 // Deconvolution methods
 include { runRCTD } from './rctd/run_method.nf'
 include { buildCell2locationModel; fitCell2locationModel} from './cell2location/run_method.nf'
-
 // Helper functions
 include { convertBetweenRDSandH5AD as convert_sc ; convertBetweenRDSandH5AD as convert_sp } from '../helper_processes'
 include { formatTSVFile as formatStereoscope; formatTSVFile as formatC2L; formatTSVFile as formatDestVI; formatTSVFile as formatDSTG;
