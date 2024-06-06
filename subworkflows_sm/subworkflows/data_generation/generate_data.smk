@@ -51,7 +51,8 @@ rule generateSyntheticData:
         rootdir=config['rootdir'],
         reps=config['reps'],
         args= ' '.join([f"--{k} {v}" for k, v in config.items() if k not in ["dataset_type", "reps", "sc_input"]])
-    container: "csangara/synthspot:latest"
+    container: 
+        "csangara/synthspot:latest"
     shell:
-        "python3 script.py {config}"
+        "python3  ./subworkflows_sm/subworkflows/data_generation/script.py {config}"
             
