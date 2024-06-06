@@ -72,7 +72,10 @@ def fit_cell2location_model(sp_input, model, params):
     print(command)
     subprocess.run(command, check=True)
 
-
+def format_tsv(input_file, output_file, params):
+    # Assuming you have a script or function for formatting
+    command = f"python format_script.py {input_file} -o {output_file}"
+    subprocess.run(command, shell=True, check=True)
 
 # if __name__ == "__main__":
     
