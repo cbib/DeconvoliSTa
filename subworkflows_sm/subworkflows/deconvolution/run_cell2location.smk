@@ -2,8 +2,9 @@
 
 import os
 import sys
+print('Original sys.path:', sys.path)
+sys.path.append('cell2location/')
 from functions import build_cell2location_model, fit_cell2location_model
-# sys.path.append('/subworkflows_sm/subworkflows/data_generation/')
 
 # configfile: "config.yaml"
 
