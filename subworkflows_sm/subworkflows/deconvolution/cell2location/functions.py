@@ -29,13 +29,12 @@ def build_cell2location_model(sc_input, params):
     print(command)
     subprocess.run(command, check=True)
 
-def fit_cell2location_model(sp_input, sp_input_rds, model, params):
+def fit_cell2location_model(sp_input, model, params):
     """
     Fit cell2location model.
     
     Args:
         sp_input (str): Path to spatial input file.
-        sp_input_rds (str): Path to RDS spatial input file.
         model (str): Path to the model file.
         params (dict): Parameters for fitting the model.
     """
