@@ -19,3 +19,4 @@ deconv_args:
     fit: ""
 
 runID_props: "_001"
+output: "res"

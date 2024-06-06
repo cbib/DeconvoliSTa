@@ -9,6 +9,7 @@ from functions import build_cell2location_model, fit_cell2location_model, format
 # Préparez les chemins d'entrée/sortie
 sc_input = config["sc_input"]
 sp_input = config["sp_input"]
+output = config["output"]
 import yaml
 
 # Lire le fichier de configuration YAML
@@ -54,6 +55,6 @@ rule format_c2l:
     output:
         "formatted_proportions_cell2location_{output_suffix}{runID_props}.tsv"
     shell:
-        format_tsv(input, output.output, config)
+        format_tsv(input, output, config)
 
 
