@@ -26,7 +26,7 @@ rule build_cell2location:
     output:
         "sc.h5ad"
     run:
-        build_cell2location_model(sc_input, config)
+        build_cell2location_model(sc_input)
 
 rule fit_cell2location:
     input:
