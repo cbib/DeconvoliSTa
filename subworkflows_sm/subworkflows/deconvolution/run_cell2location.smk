@@ -22,7 +22,7 @@ rule build_cell2location:
     output:
         "sc.h5ad"
     run:
-        build_cell2location_model(input.sc_input, config)
+        build_cell2location_model(sc_input, config)
 
 rule fit_cell2location:
     input:
@@ -31,7 +31,7 @@ rule fit_cell2location:
     output:
         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
     run:
-        fit_cell2location_model(input.sp_input, input.sp_input, input.model, config)
+        fit_cell2location_model(sp_input, model, config)
 
 rule format_c2l:
     input:
@@ -39,7 +39,7 @@ rule format_c2l:
     output:
         "formatted_proportions_cell2location_{output_suffix}{runID_props}.tsv"
     run:
-        format_tsv(input.input, output.output, config)
+        format_tsv(input, output.output, config)
 
 
 
