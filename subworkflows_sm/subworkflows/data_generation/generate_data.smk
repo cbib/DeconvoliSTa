@@ -43,7 +43,7 @@ rule generateSyntheticData:
     input:
         sc_input=config['sc_input']
     output:
-        expand("path/to/synthetic/data/{basename}_{dataset_type}_rep{rep}.rds", 
+        expand("synthetic/data/{basename}_{dataset_type}_rep{rep}.rds", 
                basename= os.path.splitext(os.path.basename(config['sc_input']))[0],
                dataset_type=config['dataset_type'].split(','), 
                rep=range(1, int(config['reps']) + 1))
