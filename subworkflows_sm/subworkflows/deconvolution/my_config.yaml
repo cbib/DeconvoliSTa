@@ -12,7 +12,7 @@ output_dir: "."
 sampleID: "none"
 epoch_build: "default"
 epoch_fit: "default"
-annot: "/path/to/annotation/file"
+annot: "subclass"
 deconv_args:
   cell2location:
     build: ""
