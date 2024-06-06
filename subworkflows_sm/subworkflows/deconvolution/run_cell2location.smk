@@ -25,6 +25,8 @@ rule build_cell2location:
         sc_input
     output:
         "sc.h5ad"
+    singularity:
+        "docker://csangara/sp_cell2location:latest"
     run:
         build_cell2location_model(sc_input)
 
@@ -34,6 +36,8 @@ rule fit_cell2location:
         model="sc.h5ad"
     output:
         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
+    singularity:
+        "docker://csangara/sp_cell2location:latest"
     run:
         fit_cell2location_model(sp_input, model, config)
 
@@ -42,6 +46,8 @@ rule format_c2l:
         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
     output:
         "formatted_proportions_cell2location_{output_suffix}{runID_props}.tsv"
+    singularity:
+        "docker://csangara/sp_cell2location:latest"
     run:
         format_tsv(input, output.output, config)
 
