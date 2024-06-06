@@ -3,7 +3,7 @@
 import os
 import sys
 sys.path.append('cell2location/')
-from functions import build_cell2location_model, fit_cell2location_model
+from functions import build_cell2location_model, fit_cell2location_model, format_tsv
 
 
 # Préparez les chemins d'entrée/sortie
