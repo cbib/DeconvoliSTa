@@ -85,5 +85,5 @@ if __name__ == "__main__":
     sc_input  = args[1]
     print(sc_input)
 
-    
+    build_cell2location_model(sc_input)
   
