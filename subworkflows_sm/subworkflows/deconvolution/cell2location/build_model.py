@@ -33,8 +33,8 @@ def main():
 
     
     args = prs.parse_args()
-    cuda_device = args.cuda_device
-
+    # cuda_device = args.cuda_device a regler
+    cuda_device == "cpu"
     print("cuda device = ", cuda_device)
     assert (cuda_device.isdigit() or cuda_device == "cpu"), "invalid device id"
     assert os.path.exists(args.sc_data_path), f"{args.sc_data_path} sc file not found"
