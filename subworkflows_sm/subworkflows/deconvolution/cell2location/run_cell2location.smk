@@ -36,19 +36,20 @@ rule convertBetweenRDSandH5AD:
         r"""
         Rscript ./convertBetweenRDSandH5AD.R --input_path {input.rds_file}
         """
-        
+
+
+
 rule build_cell2location:
     input:
-        sc_input
+        "convertBetweenRDSandH5AD"
     output:
         "sc.h5ad"
     singularity:
         "docker://csangara/sp_cell2location:latest"
     shell:
         """
-        python3 functions.py {sc_input} 
+        python3 functions.py {input[0]}
         """
-
 
 rule fit_cell2location:
     input:
@@ -60,7 +61,33 @@ rule fit_cell2location:
         "docker://csangara/sp_cell2location:latest"
     shell:
         """
-        fit_cell2location_model {sp_input}, {model}, {config}
+        fit_cell2location_model {input[0]}, {input[1]}
         """
+         
+# rule build_cell2location:
+#     input:
+#         sc_input
+#     output:
+#         "sc.h5ad"
+#     singularity:
+#         "docker://csangara/sp_cell2location:latest"
+#     shell:
+#         """
+#         python3 functions.py {sc_input} 
+#         """
+
+
+# rule fit_cell2location:
+#     input:
+#         sp_input,
+#         model="sc.h5ad"
+#     output:
+#         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
+#     singularity:
+#         "docker://csangara/sp_cell2location:latest"
+#     shell:
+#         """
+#         fit_cell2location_model {sp_input}, {model}, {config}
+#         """
 
 
