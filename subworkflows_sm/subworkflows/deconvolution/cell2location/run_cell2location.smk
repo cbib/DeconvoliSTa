@@ -34,7 +34,10 @@ rule convertBetweenRDSandH5AD:
         "docker://csangara/seuratdisk:latest"
     shell:
         r"""
-        Rscript convertBetweenRDSandH5AD.R --input_path {input.rds_file}
+        ls -l
+        """
+        r"""
+        Rscript ../convertBetweenRDSandH5AD.R --input_path {input.rds_file}
         """
 rule build_cell2location:
     input:
