@@ -59,8 +59,10 @@ rule fit_cell2location:
     input:
         sp_input,
         model="sc.h5ad"
+        output_suffix = get_basename(sp_input)
+        runID_props = ""
     output:
-        "proportions_cell2location_output_suffix_runID_props.preformat"
+        "proportions_cell2location_{output_suffix}_{runID_props}.preformat"
     singularity:
         "docker://csangara/sp_cell2location:latest"
     shell:

@@ -1,14 +1,6 @@
 # functions.py
-
 import subprocess
-
 import configparser
-
-# Lire le fichier de configuration Nextflow-like
-# conf = configparser.ConfigParser()
-# conf.read("../my_config.config")
-# # params = conf["params"]
-
 import yaml
 
 # Lire le fichier de configuration YAML
@@ -32,13 +24,6 @@ def build_cell2location_model(sc_input):
     
     print(f"Building cell2location model with {'GPU' if params['gpu'] else 'CPU'}...")
     import os
-
-    # Obtenir le répertoire de travail actuel
-    current_directory = os.getcwd()
-
-    # Afficher le répertoire de travail actuel
-    print("Le répertoire racine de l'exécution du programme est :", current_directory)
-
     command = [
         "bash", "-c", f"source activate cell2loc_env && python build_model.py {sc_input} {cuda_device} -a {params['annot']} {sample_id_arg} {epochs} {args} -o {output_dir} -p 15"
     ]
