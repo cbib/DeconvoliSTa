@@ -27,7 +27,7 @@ def fit_cell2location_model(sp_input, model):
     print(f"Arguments: {args}")
     print(f"{sp_input}")
     command = [
-        "bash", "-c", f"source activate cell2loc_env && python fit_model.py {sp_input},{model} {cuda_device} {epochs} {args} -o {output_dir} -p 5 && mv {output_dir}/proportions.tsv {output}"
+        "bash", "-c", f"source activate cell2loc_env && python fit_model.py {sp_input}{model} {cuda_device} {epochs} {args} -o {output_dir} -p 5 && mv {output_dir}/proportions.tsv {output}"
     ]
     print(command)
     subprocess.run(command, check=True)
