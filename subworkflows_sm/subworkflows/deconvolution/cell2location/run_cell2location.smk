@@ -30,19 +30,24 @@ rule all:
 
 rule convertBetweenRDSandH5AD:
     input:
-        rds_file=sc_input
+        sc_rds_file=sc_input,
+        sp_rds_file=sp_input
     output:
-        h5ad_file=temp(f"{get_basename(sc_input)}.h5ad"),
+        sc_h5ad_file=temp(f"{get_basename(sc_input)}.h5ad"),
+        sp_h5ad_file=temp(f"{get_basename(sp_input)}.h5ad")
     singularity:
         "docker://csangara/seuratdisk:latest"
     shell:
         r"""
-        Rscript ./convertBetweenRDSandH5AD.R --input_path {input.rds_file}
+        Rscript ./convertBetweenRDSandH5AD.R --input_path {input.sc_rds_file} 
         """
-
+        r"""
+        Rscript ./convertBetweenRDSandH5AD.R --input_path {input.sp_rds_file} 
+        """
 rule build_cell2location:
     input:
-        rules.convertBetweenRDSandH5AD.output.h5ad_file
+        rules.convertBetweenRDSandH5AD.output.sc_h5ad_file
+
     output:
         "sc.h5ad"
     singularity:
@@ -52,9 +57,10 @@ rule build_cell2location:
         python3 run_build.py {input[0]}
         """
 
+
 rule fit_cell2location:
     input:
-        sp_input,
+        rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
         model="sc.h5ad"
     output:
         "proportions_cell2location_{output_suffix}_{runID_props}.preformat"
@@ -62,7 +68,6 @@ rule fit_cell2location:
         "docker://csangara/sp_cell2location:latest"
     shell:
         """
-         python3 run_fit.py  {input[0]}, {input[1]}
+        python3 run_fit.py {input[0]}, {input[1]}
         """
-
 
