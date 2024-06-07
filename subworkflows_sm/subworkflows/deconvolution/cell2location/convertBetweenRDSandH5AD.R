@@ -50,7 +50,7 @@ if (tolower(ext) == "rds"){
                                      meta.data=seurat_obj@meta.data)
   }
   gc()
-  
+  cat ("fillleee ", file_name, "\n")
   if (file.exists(paste0(file_name, ".h5ad"))){
     return ("h5ad file already exists")
   }
