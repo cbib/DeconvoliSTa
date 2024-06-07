@@ -1,0 +1,22 @@
+# mu_config.yaml
+sc_input: "../../../unit-test/test_sc_data.rds"
+sp_input: "../../../unit-test/test_sp_data.rds"
+sp_input_rds: "../../../unit-test/test_sp_data_rds.rds"
+
+gpu: true
+cuda_device: "cuda:0"
+
+rootdir: "."
+output_dir: "."
+
+sampleID: "none"
+epoch_build: "default"
+epoch_fit: "default"
+annot: "subclass"
+deconv_args:
+  cell2location:
+    build: ""
+    fit: ""
+
+runID_props: "_001"
+output: "res"
