@@ -33,9 +33,6 @@ rule convertBetweenRDSandH5AD:
     singularity:
         "docker://csangara/seuratdisk:latest"
     shell:
-        # r"""
-        # ls -l ../
-        # """
         r"""
         Rscript ./convertBetweenRDSandH5AD.R --input_path {input.rds_file}
         """
@@ -47,10 +44,9 @@ rule build_cell2location:
     singularity:
         "docker://csangara/sp_cell2location:latest"
     shell:
-        # """
-        # python3 functions.py {sc_input} 
-        # """
-        "echo 'dddddd'"
+        """
+        python3 functions.py {sc_input} 
+        """
 
 
 rule fit_cell2location:
@@ -62,9 +58,8 @@ rule fit_cell2location:
     singularity:
         "docker://csangara/sp_cell2location:latest"
     shell:
-        # """
-        # fit_cell2location_model {sp_input}, {model}, {config}
-        # """
-        "echo 'dddddd'"
+        """
+        fit_cell2location_model {sp_input}, {model}, {config}
+        """
 
 
