@@ -25,7 +25,8 @@ with open("my_config.yaml", "r") as config_file:
 def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
-
+output_suffix = get_basename(sp_input)
+runID_props = ""
 
 rule all:
     input:
@@ -58,9 +59,7 @@ rule build_cell2location:
 rule fit_cell2location:
     input:
         sp_input,
-        model="sc.h5ad",
-        output_suffix = get_basename(sp_input),
-        runID_props = ""
+        model="sc.h5ad"
     output:
         "proportions_cell2location_{output_suffix}_{runID_props}.preformat"
     singularity:
