@@ -36,7 +36,7 @@ def build_cell2location_model(sc_input):
         "bash", "-c", f"""
         source activate cell2loc_env &&
         python {params['rootdir']}/./cell2location/build_model.py \\
-            ../{sc_input} {cuda_device} -a {params['annot']} {sample_id_arg} {epochs} {args} -o {output_dir}
+            {sc_input} {cuda_device} -a {params['annot']} {sample_id_arg} {epochs} {args} -o {output_dir}
         """
     ]
     print(command)
@@ -65,7 +65,7 @@ def fit_cell2location_model(sp_input, model, params):
         "bash", "-c", f"""
         source activate cell2loc_env &&
         python {params['rootdir']}/cell2location/fit_model.py \\
-            ../{sp_input} {model} {cuda_device} {epochs} {args} -o {output_dir} &&
+            {sp_input} {model} {cuda_device} {epochs} {args} -o {output_dir} &&
         mv {output_dir}/proportions.tsv {output}
         """
     ]
