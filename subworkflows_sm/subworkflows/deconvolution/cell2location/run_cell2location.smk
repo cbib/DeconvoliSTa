@@ -25,6 +25,11 @@ with open("my_config.yaml", "r") as config_file:
 def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
+
+rule all:
+    input:
+        "proportions_cell2location_{output_suffix}{runID_props}.preformat"
+
 rule convertBetweenRDSandH5AD:
     input:
         rds_file=sc_input
@@ -63,7 +68,7 @@ rule fit_cell2location:
         """
         fit_cell2location_model {input[0]}, {input[1]}
         """
-         
+
 # rule build_cell2location:
 #     input:
 #         sc_input
