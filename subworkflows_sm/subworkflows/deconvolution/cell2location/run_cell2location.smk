@@ -29,7 +29,7 @@ def get_basename(file_path):
 
 rule all:
     input:
-        "proportions_cell2location_{output_suffix}{runID_props}.preformat"
+        "proportions_cell2location_output_suffix_runID_props.preformat"
 
 rule convertBetweenRDSandH5AD:
     input:
@@ -60,7 +60,7 @@ rule fit_cell2location:
         sp_input,
         model="sc.h5ad"
     output:
-        "proportions_cell2location_{output_suffix}{runID_props}.preformat"
+        "proportions_cell2location_output_suffix_runID_props.preformat"
     singularity:
         "docker://csangara/sp_cell2location:latest"
     shell:
