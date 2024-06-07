@@ -16,10 +16,6 @@ import yaml
 with open("my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
-# rule all:
-#     input:
-#         "sc.h5ad",
-#         # "proportions_cell2location_{output_suffix}{runID_props}.preformat"
 
 # Fonction pour obtenir le nom de base du fichier sans extension
 def get_basename(file_path):
