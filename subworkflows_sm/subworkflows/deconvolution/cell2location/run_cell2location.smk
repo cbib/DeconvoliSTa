@@ -68,6 +68,5 @@ rule fit_cell2location:
         """
          python3 run_fit.py  {input[0]}, {input[1]}
         """
-     """
 
 
