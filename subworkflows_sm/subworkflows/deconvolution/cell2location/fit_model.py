@@ -25,7 +25,8 @@ def main():
     
     args = prs.parse_args()
     
-    cuda_device = args.cuda_device
+    # cuda_device = args.cuda_device
+    cuda_device = "cpu"
     sp_data_path = args.sp_data_path
     output_folder = args.out_dir
         
