@@ -34,7 +34,7 @@ rule convertBetweenRDSandH5AD:
         "docker://csangara/seuratdisk:latest"
     script:
         """
-        Rscript ./subworkflows/deconvolution/convertBetweenRDSandH5AD.R --input_path {rds_file}
+        Rscript ./subworkflows/deconvolution/convertBetweenRDSandH5AD.R --input_path {input.rds_file}
         """
 
 # rule build_cell2location:
