@@ -21,22 +21,19 @@ with open("my_config.yaml", "r") as config_file:
 #         "sc.h5ad",
 #         # "proportions_cell2location_{output_suffix}{runID_props}.preformat"
 
-# Fonction pour obtenir le nom de base du fichier sans extension
-def get_basename(file_path):
-    return os.path.splitext(os.path.basename(file_path))[0]
+# Fonction pour convertir un fichier RDS en H5AD
+def convert_rds_to_h5ad(rds_file, h5ad_file):
+    import rpy2.robjects as robjects
+    from rpy2.robjects import r
+    r['load'](rds_file)
+    adata = robjects.r('data')  # Assuming the loaded object is named 'data'
+    adata.write_h5ad(h5ad_file)
 
-rule convertBetweenRDSandH5AD:
-    input:
-        rds_file=sc_input
-    output:
-        h5ad_file= f"{get_basename(rds_file)}.h5ad",
-        rds_file_out= rds_file
-    singularity:
-        "docker://csangara/seuratdisk:latest"
-    script:
-        """
-        Rscript {params.rootdir}/subworkflows/deconvolution/convertBetweenRDSandH5AD.R --input_path {input.rds_file}
-        """
+# Vérifiez si le fichier sc_input est en format RDS et convertissez-le en H5AD si nécessaire
+if sc_input.endswith('.rds'):
+    h5ad_file = sc_input.replace('.rds', '.h5ad')
+    convert_rds_to_h5ad(sc_input, h5ad_file)
+    sc_input = h5ad_file
 
 rule build_cell2location:
     input:
