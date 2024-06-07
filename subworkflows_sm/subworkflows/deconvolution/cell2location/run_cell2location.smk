@@ -32,10 +32,8 @@ rule convertBetweenRDSandH5AD:
         h5ad_file= f"{get_basename(config["sc_input"])}.h5ad",
     singularity:
         "docker://csangara/seuratdisk:latest"
-    script:
-        """
-        Rscript ./subworkflows/deconvolution/convertBetweenRDSandH5AD.R --input_path {input.rds_file}
-        """
+    shell:
+        f"Rscript ./subworkflows/deconvolution/convertBetweenRDSandH5AD.R --input_path {input.rds_file}"
 
 rule build_cell2location:
     input:
