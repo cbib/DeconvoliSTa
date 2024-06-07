@@ -10,7 +10,7 @@ from functions import build_cell2location_model, fit_cell2location_model
 # sc_input = config["sc_input"]
 # sp_input = config["sp_input"]
 # output = config["output"]
-# import yaml
+import yaml
 
 # Lire le fichier de configuration YAML
 with open("my_config.yaml", "r") as config_file:
