@@ -10,7 +10,7 @@
 # visium_sd:   sd of normal dist. used for downsampling each spot
 
 synthspot:
-  sc_input: /home/chananchidas/spotless-benchmark/data/raw_data/sc_datasets/brain_cortex_generation.rds
+  sc_input: /home/abderahim/spotless-benchmark/standards/reference/silver_standard_1_brain_cortex.rds  
   clust_var: celltype
   region_var: brain_subregion
   type: real
