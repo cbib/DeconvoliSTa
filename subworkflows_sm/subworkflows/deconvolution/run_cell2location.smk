@@ -6,11 +6,11 @@ sys.path.append('cell2location/')
 from functions import build_cell2location_model, fit_cell2location_model
 
 
-# Préparez les chemins d'entrée/sortie
-sc_input = config["sc_input"]
-sp_input = config["sp_input"]
-output = config["output"]
-import yaml
+# # Préparez les chemins d'entrée/sortie
+# sc_input = config["sc_input"]
+# sp_input = config["sp_input"]
+# output = config["output"]
+# import yaml
 
 # Lire le fichier de configuration YAML
 with open("my_config.yaml", "r") as config_file:
