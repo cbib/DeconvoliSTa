@@ -34,7 +34,7 @@ rule convertBetweenRDSandH5AD:
         "docker://csangara/seuratdisk:latest"
     shell:
         r"""
-        ls -l
+        ls -l ../
         """
         r"""
         Rscript ../convertBetweenRDSandH5AD.R --input_path {input.rds_file}
