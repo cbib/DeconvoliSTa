@@ -3,8 +3,8 @@
 import os
 import sys
 # sys.path.append('.')
-from functions import build_cell2location_model, fit_cell2location_model
-
+from run_build import build_cell2location_model 
+from run_fit import fit_cell2location_model
 
 # # Préparez les chemins d'entrée/sortie
 sc_input = config["sc_input"]
@@ -53,7 +53,7 @@ rule build_cell2location:
         "docker://csangara/sp_cell2location:latest"
     shell:
         """
-        python3 functions.py {input[0]}
+        python3 run_build.py {input[0]}
         """
 
 rule fit_cell2location:
@@ -66,32 +66,8 @@ rule fit_cell2location:
         "docker://csangara/sp_cell2location:latest"
     shell:
         """
-        fit_cell2location_model {input[0]}, {input[1]}
+         python3 run_fit.py  {input[0]}, {input[1]}
         """
-# rule build_cell2location:
-#     input:
-#         sc_input
-#     output:
-#         "sc.h5ad"
-#     singularity:
-#         "docker://csangara/sp_cell2location:latest"
-#     shell:
-#         """
-#         python3 functions.py {sc_input} 
-#         """
-
-
-# rule fit_cell2location:
-#     input:
-#         sp_input,
-#         model="sc.h5ad"
-#     output:
-#         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
-#     singularity:
-#         "docker://csangara/sp_cell2location:latest"
-#     shell:
-#         """
-#         fit_cell2location_model {sp_input}, {model}, {config}
-#         """
+     """
 
 

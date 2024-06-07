@@ -10,8 +10,8 @@ rootdir: "/home/abderahim"
 output_dir: "."
 
 sampleID: "none"
-epoch_build: "10"
-epoch_fit: "10"
+epoch_build: "5"
+epoch_fit: "5"
 annot: "subclass"
 deconv_args:
   cell2location:
