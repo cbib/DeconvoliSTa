@@ -29,8 +29,6 @@ rule build_cell2location:
     singularity:
         "docker://csangara/sp_cell2location:latest"
     shell:
-        # build_cell2location_model(sc_input)
-        # "python -c "build_cell2location_model(sc_input)" "
         """
         python3 functions.py {sc_input} 
         """
