@@ -40,7 +40,7 @@ def build_cell2location_model(sc_input):
     print("Le répertoire racine de l'exécution du programme est :", current_directory)
 
     command = [
-        "bash", "-c", f"source activate cell2loc_env && python build_model.py {sc_input} {cuda_device} -a {params['annot']} {sample_id_arg} {epochs} {args} -o {output_dir}"
+        "bash", "-c", f"source activate cell2loc_env && python build_model.py {sc_input} {cuda_device} -a {params['annot']} {sample_id_arg} {epochs} {args} -o {output_dir} -p 15"
     ]
     print(command)
     subprocess.run(command, check=True)
@@ -68,7 +68,7 @@ def fit_cell2location_model(sp_input, model, params):
         "bash", "-c", f"""
         source activate cell2loc_env &&
         python fit_model.py \\
-            {sp_input} {model} {cuda_device} {epochs} {args} -o {output_dir} &&
+            {sp_input} {model} {cuda_device} {epochs} {args} -o {output_dir} -p 15 &&
         mv {output_dir}/proportions.tsv {output}
         """
     ]
