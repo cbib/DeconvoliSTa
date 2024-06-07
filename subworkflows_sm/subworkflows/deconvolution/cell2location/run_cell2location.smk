@@ -7,9 +7,9 @@ from functions import build_cell2location_model, fit_cell2location_model
 
 
 # # Préparez les chemins d'entrée/sortie
-# sc_input = config["sc_input"]
-# sp_input = config["sp_input"]
-# output = config["output"]
+sc_input = config["sc_input"]
+sp_input = config["sp_input"]
+output = config["output"]
 import yaml
 
 # Lire le fichier de configuration YAML
