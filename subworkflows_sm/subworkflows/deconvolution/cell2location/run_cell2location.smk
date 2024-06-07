@@ -60,7 +60,9 @@ rule fit_cell2location:
     singularity:
         "docker://csangara/sp_cell2location:latest"
     shell:
-        """
-        fit_cell2location_model {sp_input}, {model}, {config}
-        """
+        # """
+        # fit_cell2location_model {sp_input}, {model}, {config}
+        # """
+        "echo 'dddddd'"
+
 
