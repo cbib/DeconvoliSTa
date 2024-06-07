@@ -32,7 +32,7 @@ rule build_cell2location:
         # build_cell2location_model(sc_input)
         # "python -c "build_cell2location_model(sc_input)" "
         """
-        python3 ./cell2location/functions.py {sc_input} 
+        python3 functions.py {sc_input} 
         """
 
 
