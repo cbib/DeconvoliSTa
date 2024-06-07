@@ -28,7 +28,7 @@ def get_basename(file_path):
 
 rule all:
     input:
-        "proportions_cell2location_{output_suffix}{runID_props}.preformat"
+        "sc.h5ad"
 
 rule convertBetweenRDSandH5AD:
     input:
