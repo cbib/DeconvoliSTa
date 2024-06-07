@@ -21,6 +21,23 @@ with open("my_config.yaml", "r") as config_file:
 #         "sc.h5ad",
 #         # "proportions_cell2location_{output_suffix}{runID_props}.preformat"
 
+# Fonction pour obtenir le nom de base du fichier sans extension
+def get_basename(file_path):
+    return os.path.splitext(os.path.basename(file_path))[0]
+
+rule convertBetweenRDSandH5AD:
+    input:
+        rds_file=sc_input
+    output:
+        h5ad_file=lambda wildcards: f"{get_basename(wildcards.rds_file)}.h5ad",
+        rds_file_out=lambda wildcards: wildcards.rds_file
+    singularity:
+        "docker://csangara/seuratdisk:latest"
+    script:
+        """
+        Rscript {params.rootdir}/subworkflows/deconvolution/convertBetweenRDSandH5AD.R --input_path {input.rds_file}
+        """
+
 rule build_cell2location:
     input:
         sc_input
