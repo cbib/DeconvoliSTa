@@ -26,15 +26,16 @@ def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
 
+
 rule all:
     input:
-        "sc.h5ad"
+        "proportions_cell2location_{output_suffix}{runID_props}.preformat"
 
 rule convertBetweenRDSandH5AD:
     input:
         rds_file=sc_input
     output:
-        h5ad_file= f"{get_basename(config["sc_input"])}.h5ad",
+        h5ad_file=temp(f"{get_basename(sc_input)}.h5ad"),
     singularity:
         "docker://csangara/seuratdisk:latest"
     shell:
@@ -42,11 +43,9 @@ rule convertBetweenRDSandH5AD:
         Rscript ./convertBetweenRDSandH5AD.R --input_path {input.rds_file}
         """
 
-
-
 rule build_cell2location:
     input:
-        "convertBetweenRDSandH5AD"
+        rules.convertBetweenRDSandH5AD.output.h5ad_file
     output:
         "sc.h5ad"
     singularity:
@@ -68,7 +67,6 @@ rule fit_cell2location:
         """
         fit_cell2location_model {input[0]}, {input[1]}
         """
-
 # rule build_cell2location:
 #     input:
 #         sc_input
