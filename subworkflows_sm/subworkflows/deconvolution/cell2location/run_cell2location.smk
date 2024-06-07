@@ -29,8 +29,8 @@ rule convertBetweenRDSandH5AD:
     input:
         rds_file=sc_input
     output:
-        h5ad_file= f"{get_basename({input.rds_file})}.h5ad",
-        rds_file_out= input.rds_file
+        h5ad_file= f"{get_basename(config["sc_input"])}.h5ad",
+        rds_file_out= config["sc_input"]
     singularity:
         "docker://csangara/seuratdisk:latest"
     script:
