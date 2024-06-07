@@ -2,7 +2,7 @@
 
 import os
 import sys
-sys.path.append('cell2location/')
+# sys.path.append('.')
 from functions import build_cell2location_model, fit_cell2location_model
 
 
