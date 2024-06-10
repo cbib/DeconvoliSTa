@@ -26,7 +26,8 @@ output = f"proportions_cell2location_{output_suffix}{runID_props}.preformat"
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
 print(script_dir)
-convert_script = os.path.abspath("../convertBetweenRDSandH5AD.R")
+convert_script = os.path.abspath("../convertBetweenRDSandH5AD.R") 
+
 
 
 rule all:
