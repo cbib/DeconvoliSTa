@@ -28,7 +28,7 @@ rule all:
     input:
         # "proportions_cell2location_{}{}.preformat".format(output_suffix, runID_props)
         # "proportions_cell2location.preformat"
-        "proportions_cell2location_{output_suffix}{runID_props}.preformat"
+        "proportions_cell2location_output_suffix_runID_props.preformat"
 
     run:
         print(f"output_suffix: {output_suffix}")
