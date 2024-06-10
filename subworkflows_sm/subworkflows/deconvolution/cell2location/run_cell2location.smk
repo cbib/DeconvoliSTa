@@ -26,7 +26,7 @@ output = f"proportions_cell2location_{output_suffix}{runID_props}.preformat"
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
 print(script_dir)
-convert_script = "../convertBetweenRDSandH5AD.R"
+convert_script = "/home/abderahim/spotless_depot/spotless-benchmark-snakemaked/spotless-benchmark/subworkflows_sm/subworkflows/deconvolution/convertBetweenRDSandH5AD.R"
 
 
 rule all:
