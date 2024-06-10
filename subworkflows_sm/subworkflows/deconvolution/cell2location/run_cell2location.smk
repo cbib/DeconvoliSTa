@@ -47,7 +47,6 @@ rule convertBetweenRDSandH5AD:
 rule build_cell2location:
     input:
         rules.convertBetweenRDSandH5AD.output.sc_h5ad_file
-
     output:
         "sc.h5ad"
     singularity:
