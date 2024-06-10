@@ -23,6 +23,10 @@ output_suffix = get_basename(sp_input)
 runID_props = params["runID_props"]
 output = f"proportions_cell2location_{output_suffix}{runID_props}.preformat"
 
+# Définir le chemin absolu du script R
+script_dir = os.path.dirname(os.path.abspath(__file__))
+convert_script = os.path.join(script_dir, "convertBetweenRDSandH5AD.R")
+
 
 rule all:
     input:
@@ -39,10 +43,10 @@ rule convertBetweenRDSandH5AD:
         "docker://csangara/seuratdisk:latest"
     shell:
         r"""
-        Rscript ../convertBetweenRDSandH5AD.R --input_path {input.sc_rds_file} 
+        Rscript {convert_script} --input_path {input.sc_rds_file} 
         """
         r"""
-        Rscript ../convertBetweenRDSandH5AD.R --input_path {input.sp_rds_file} 
+        Rscript {convert_script} --input_path {input.sp_rds_file} 
         """
 rule build_cell2location:
     input:
