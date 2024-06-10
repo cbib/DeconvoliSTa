@@ -3,6 +3,10 @@ import subprocess
 import configparser
 import yaml
 
+# Fonction pour obtenir le nom de base du fichier sans extension
+def get_basename(file_path):
+    return os.path.splitext(os.path.basename(file_path))[0]
+
 # # Lire le fichier de configuration YAML
 with open("my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
@@ -16,7 +20,7 @@ def fit_cell2location_model(sp_input, model):
         model (str): Path to the model file.
         params (dict): Parameters for fitting the model.
     """
-    output_suffix = sp_input.split('/')[-1]
+    output_suffix = get_basename(sp_input)
     output = f"proportions_cell2location_{output_suffix}{params['runID_props']}.preformat"
     epochs = f"-e {params['epoch_fit']}" if params['epoch_fit'] != "default" else ""
     args = params.get('deconv_args', {}).get('cell2location', {}).get('fit', "")
