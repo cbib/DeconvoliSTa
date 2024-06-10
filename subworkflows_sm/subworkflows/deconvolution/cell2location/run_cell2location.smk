@@ -28,7 +28,7 @@ rule all:
     input:
         # "proportions_cell2location_{}{}.preformat".format(output_suffix, runID_props)
         # "proportions_cell2location_output_suffix_runID_props.preformat"
-        "proportions_cell2location.preformat"
+        # "proportions_cell2location.preformat"
 
     run:
         print(f"output_suffix: {output_suffix}")
@@ -70,7 +70,7 @@ rule fit_cell2location:
     output:
         # "proportions_cell2location_{}{}.preformat".format(output_suffix, runID_props)
         # "proportions_cell2location_{output_suffix}{runID_props}.preformat"
-        "proportions_cell2location.preformat"
+        # "proportions_cell2location.preformat"
 
     singularity:
         "docker://csangara/sp_cell2location:latest"
