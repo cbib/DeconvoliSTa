@@ -31,8 +31,6 @@ rule all:
         # "proportions_cell2location_{}{}.preformat".format(output_suffix, runID_props)
         # "proportions_cell2location.preformat"
         out = output
-    run:
-        print(f"output_suffix: {out}")
 
 rule convertBetweenRDSandH5AD:
     input:
@@ -71,7 +69,7 @@ rule fit_cell2location:
         # "proportions_cell2location_{}{}.preformat".format(output_suffix, runID_props)
         # "proportions_cell2location_{output_suffix}{runID_props}.preformat"
         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
-        
+
     singularity:
         "docker://csangara/sp_cell2location:latest"
     shell:
