@@ -29,6 +29,8 @@ rule all:
         expand("proportions_cell2location_{output_suffix}{runID_props}.preformat",
         output_suffix = output_suffix,
         runID_props = runID_props)
+        print(f"output_suffix: {output_suffix}")
+        print(f"runID_props: {runID_props}")
 
 rule convertBetweenRDSandH5AD:
     input:
@@ -64,10 +66,10 @@ rule fit_cell2location:
         rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
         model="sc.h5ad"
     output:
-        # "proportions_cell2location_{output_suffix}{runID_props}.preformat"
-        expand("proportions_cell2location_{output_suffix}{runID_props}.preformat",
-        output_suffix = output_suffix,
-        runID_props = runID_props)
+        "proportions_cell2location_{output_suffix}{runID_props}.preformat"
+        # expand("proportions_cell2location_{output_suffix}{runID_props}.preformat",
+        # output_suffix = output_suffix,
+        # runID_props = runID_props)
     singularity:
         "docker://csangara/sp_cell2location:latest"
     shell:
