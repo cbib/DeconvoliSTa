@@ -26,6 +26,7 @@ def fit_cell2location_model(sp_input, model):
     print(f"Fitting cell2location model from file {model} with {'GPU' if params['gpu'] else 'CPU'}...")
     print(f"Arguments: {args}")
     print(f"{sp_input}")
+    print(f"sp_input.split(",")[0]" {sp_input.split(",")[0]})
     command = [
         "bash", "-c", f"source activate cell2loc_env && python fit_model.py {sp_input.split(",")[0]} {model} {cuda_device} {epochs} {args} -o {output_dir} -p 5 && mv {output_dir}/proportions.tsv {output}"
     ]
