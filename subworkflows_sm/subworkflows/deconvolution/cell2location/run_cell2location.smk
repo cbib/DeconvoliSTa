@@ -26,7 +26,7 @@ output = f"proportions_cell2location_{output_suffix}{runID_props}.preformat"
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
 print(script_dir)
-convert_script = "../convertBetweenRDSandH5AD.R"
+convert_script = os.path.abspath("../convertBetweenRDSandH5AD.R")
 
 
 rule all:
@@ -42,16 +42,15 @@ rule convertBetweenRDSandH5AD:
         sp_h5ad_file=temp(f"{get_basename(sp_input)}.h5ad")
     singularity:
         "docker://csangara/seuratdisk:latest"
-    # shell:
-    #     r"""
-    #     Rscript {convert_script} --input_path {input.sc_rds_file} 
-    #     """
-    #     r"""
-    #     Rscript {convert_script} --input_path {input.sp_rds_file} 
-    #     """
-    script:
-        "../convertBetweenRDSandH5AD.R --input_path {snakemake@input[['sc_rds_file']]} ; ../convertBetweenRDSandH5AD.R --input_path {snakemake@input[['sp_rds_file']]}"
-        
+    shell:
+        r"""
+        Rscript {convert_script} --input_path {input.sc_rds_file} 
+        """
+        r"""
+        Rscript {convert_script} --input_path {input.sp_rds_file} 
+        """
+    # script:
+        # "../convertBetweenRDSandH5AD.R --input_path {input.sc_input} ; ../convertBetweenRDSandH5AD.R --input_path {input.sp_input}"
 rule build_cell2location:
     input:
         rules.convertBetweenRDSandH5AD.output.sc_h5ad_file
