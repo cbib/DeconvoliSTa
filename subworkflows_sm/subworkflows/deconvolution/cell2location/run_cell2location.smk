@@ -22,13 +22,13 @@ def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
 output_suffix = get_basename(sp_input)
-runID_props = ""
+runID_props = params["runID_props"]
 
 rule all:
     input:
         expand("proportions_cell2location_{output_suffix}_{runID_props}.preformat",
-        output_suffix = get_basename(sp_input),
-        runID_props = "")
+        output_suffix = output_suffix,
+        runID_props = runID_props)
 
 rule convertBetweenRDSandH5AD:
     input:
