@@ -9,7 +9,6 @@ from run_fit import fit_cell2location_model
 # # Préparez les chemins d'entrée/sortie
 sc_input = config["sc_input"]
 sp_input = config["sp_input"]
-output = config["output"]
 import yaml
 
 # Lire le fichier de configuration YAML
@@ -28,8 +27,6 @@ output = f"proportions_cell2location_{output_suffix}{runID_props}.preformat"
 
 rule all:
     input:
-        # "proportions_cell2location_{}{}.preformat".format(output_suffix, runID_props)
-        # "proportions_cell2location.preformat"
         out = output
 
 rule convertBetweenRDSandH5AD:
@@ -66,8 +63,6 @@ rule fit_cell2location:
         rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
         model="sc.h5ad"
     output:
-        # "proportions_cell2location_{}{}.preformat".format(output_suffix, runID_props)
-        # "proportions_cell2location_{output_suffix}{runID_props}.preformat"
         "proportions_cell2location_{output_suffix}{runID_props}.preformat"
 
     singularity:

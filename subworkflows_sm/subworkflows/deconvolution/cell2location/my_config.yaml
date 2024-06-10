@@ -6,7 +6,7 @@
 gpu: false
 cuda_device: 0
 
-rootdir: "/home/abderahim"
+# rootdir: "/home/abderahim"
 output_dir: "."
 
 sampleID: "none"

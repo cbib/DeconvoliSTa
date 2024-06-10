@@ -13,7 +13,6 @@ def build_cell2location_model(sc_input):
     
     Args:
         sc_input (str): Path to single-cell input file.
-        params (dict): Parameters for building the model.
     """
     tag_suffix = sc_input.split('/')[-1]
     sample_id_arg = f"-s {params['sampleID']}" if params['sampleID'] != "none" else ""
@@ -41,6 +40,5 @@ if __name__ == "__main__":
     # Récupérer tous les arguments de la ligne de commande
     args = sys.argv
     sc_input  = args[1]
-    print(sc_input)
     build_cell2location_model(sc_input)
   
