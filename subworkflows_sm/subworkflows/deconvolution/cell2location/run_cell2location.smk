@@ -2,7 +2,6 @@
 
 import os
 import sys
-# sys.path.append('.')
 from run_build import build_cell2location_model 
 from run_fit import fit_cell2location_model
 
@@ -40,10 +39,10 @@ rule convertBetweenRDSandH5AD:
         "docker://csangara/seuratdisk:latest"
     shell:
         r"""
-        Rscript ./convertBetweenRDSandH5AD.R --input_path {input.sc_rds_file} 
+        Rscript ../convertBetweenRDSandH5AD.R --input_path {input.sc_rds_file} 
         """
         r"""
-        Rscript ./convertBetweenRDSandH5AD.R --input_path {input.sp_rds_file} 
+        Rscript ../convertBetweenRDSandH5AD.R --input_path {input.sp_rds_file} 
         """
 rule build_cell2location:
     input:
