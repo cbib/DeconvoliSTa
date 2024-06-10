@@ -51,8 +51,8 @@ rule convertBetweenRDSandH5AD:
     #     """
     script:
         """
-        ../convertBetweenRDSandH5AD.R --input_path {input['sc_rds_file']}; 
-        ../convertBetweenRDSandH5AD.R --input_path {input['sp_rds_file']}
+        ../convertBetweenRDSandH5AD.R --input_path {sc_input}; 
+        ../convertBetweenRDSandH5AD.R --input_path {sp_input}
         """
 rule build_cell2location:
     input:
