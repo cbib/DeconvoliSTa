@@ -50,9 +50,10 @@ rule convertBetweenRDSandH5AD:
     #     Rscript {convert_script} --input_path {input.sp_rds_file} 
     #     """
     script:
-        r"../convertBetweenRDSandH5AD.R --input_path {input.sc_rds_file}"
-        r"../convertBetweenRDSandH5AD.R --input_path {input.sp_rds_file}"
-
+        """
+        ../convertBetweenRDSandH5AD.R --input_path {input.sc_rds_file}; 
+        ../convertBetweenRDSandH5AD.R --input_path {input.sp_rds_file}
+        """
 rule build_cell2location:
     input:
         rules.convertBetweenRDSandH5AD.output.sc_h5ad_file
