@@ -21,8 +21,8 @@ with open("my_config.yaml", "r") as config_file:
 def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
-output_suffix = get_basename(sp_input)
-runID_props = params["runID_props"]
+output_suffix = [get_basename(sp_input)]
+runID_props = [params["runID_props"]]
 
 rule all:
     input:
