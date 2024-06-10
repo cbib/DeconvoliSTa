@@ -50,7 +50,8 @@ rule convertBetweenRDSandH5AD:
     #     Rscript {convert_script} --input_path {input.sp_rds_file} 
     #     """
     script:
-        "../convertBetweenRDSandH5AD.R --input_path {sc_input} ; ../convertBetweenRDSandH5AD.R --input_path {sp_input}"
+        "../convertBetweenRDSandH5AD.R --input_path {snakemake.sc_input} ; ../convertBetweenRDSandH5AD.R --input_path {snakemake.sp_input}"
+        
 rule build_cell2location:
     input:
         rules.convertBetweenRDSandH5AD.output.sc_h5ad_file
