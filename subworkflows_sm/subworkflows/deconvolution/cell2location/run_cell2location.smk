@@ -67,6 +67,6 @@ rule fit_cell2location:
         "docker://csangara/sp_cell2location:latest"
     shell:
         """
-        python3 run_fit.py {input[0]}, {input[1]}
+        python3 run_fit.py {input[0]} {input[1]}
         """
 

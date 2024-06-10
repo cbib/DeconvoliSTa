@@ -43,7 +43,7 @@ if __name__ == "__main__":
     import sys  
     # Récupérer tous les arguments de la ligne de commande
     args = sys.argv
-    sc_input  = args[1]
+    sp_input  = args[1]
     model = args[2]
-    fit_cell2location_model(sc_input, model)
+    fit_cell2location_model(sp_input, model)
   
