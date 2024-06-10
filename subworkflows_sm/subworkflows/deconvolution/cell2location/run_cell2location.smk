@@ -26,7 +26,7 @@ runID_props = ""
 
 rule all:
     input:
-        "proportions_cell2location_{output_suffix}_{runID_props}.preformat"
+        expand("proportions_cell2location_{output_suffix}_{runID_props}.preformat")
 
 rule convertBetweenRDSandH5AD:
     input:
