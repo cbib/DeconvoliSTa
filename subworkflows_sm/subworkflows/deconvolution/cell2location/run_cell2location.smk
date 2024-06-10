@@ -29,6 +29,7 @@ rule all:
         # expand("proportions_cell2location_{output_suffix}{runID_props}.preformat",
         # output_suffix = output_suffix,
         # runID_props = runID_props)
+        out = "proportions_cell2location_{output_suffix}{runID_props}.preformat"
     run:
         print(f"output_suffix: {output_suffix}")
         print(f"runID_props: {runID_props}")
