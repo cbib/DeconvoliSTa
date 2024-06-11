@@ -4,7 +4,7 @@ import os
 import yaml
 
 # Lire le fichier de configuration YAML
-with open("subworkflows_sm/subworkflows/deconvolution/cell2location/my_config.yaml", "r") as config_file:
+with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
 # Fonction pour obtenir le nom de base du fichier sans extension
@@ -21,7 +21,7 @@ output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
 deconv_args = params['deconv_args']
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
-rctd_script = "subworkflows_sm/subworkflows/deconvolution/rctd/script_nf.R"
+rctd_script = "subworkflows_sm/deconvolution/rctd/script_nf.R"
 annot = params['annot']
 rule all:
     input:

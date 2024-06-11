@@ -1,65 +1,36 @@
-nextflow.enable.dsl=2
 
-// Deconvolution methods
-include { runRCTD } from './rctd/run_method.nf'
-include { buildCell2locationModel; fitCell2locationModel} from './cell2location/run_method.nf'
-// Helper functions
-include { convertBetweenRDSandH5AD as convert_sc ; convertBetweenRDSandH5AD as convert_sp } from '../helper_processes'
-include { formatTSVFile as formatStereoscope; formatTSVFile as formatC2L; formatTSVFile as formatDestVI; formatTSVFile as formatDSTG;
-          formatTSVFile as formatTangram; formatTSVFile as formatSTRIDE } from '../helper_processes'
-include { createDummyFile } from '../helper_processes'
+import os
+import sys
+import yaml
 
-workflow runMethods {
-    take:
-        sc_input_ch
-        sp_input_ch
-        sc_input_type
-        sp_input_type
+# Lire le fichier de configuration YAML
+with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
+    params = yaml.safe_load(config_file)
 
-    main:
+# Fonction pour obtenir le nom de base du fichier sans extension
+def get_basename(file_path):
+    return os.path.splitext(os.path.basename(file_path))[0]
 
-        output_ch = Channel.empty() // collect output channels
+# Charger les paramètres de configuration nécessaires
+methods = config["methods"].split(',')   
+sc_input = config["sc_input"]
+sp_input = config["sp_input"]
+output_dir = config["output"]
 
+output_suffix = get_basename(sp_input)
+runID_props = params["runID_props"]
 
-                buildCell2locationModel(sc_input_conv)
+# Inclure dynamiquement les pipelines appropriés en fonction des méthodes
+for method in methods:
+    method = method.strip()  
+    include: f"{method}/run_{method}.smk"
 
-                // Repeat model output for each spatial file
-                buildCell2locationModel.out.combine(sp_input_pair)
-                .multiMap { model_sc_file, sp_file_h5ad, sp_file_rds ->
-                            model: model_sc_file
-                            sp_input: tuple sp_file_h5ad, sp_file_rds }
-                .set{ c2l_combined_ch }
+# Générer une liste des fichiers de sortie pour chaque méthode
+# output_files = [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.preformat" for method in methods]
+output_files = [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
 
-                fitCell2locationModel(c2l_combined_ch.sp_input,
-                                      c2l_combined_ch.model)
-                formatC2L(fitCell2locationModel.out)
-                output_ch = output_ch.mix(formatC2L.out)
-    emit:
-        output_ch
-}
-
-workflow {
-
-    if (!(params.mode ==~ /run_dataset/)){
-        throw new Exception("Error: can only run this with the 'run_dataset' mode")
-    }
-
-    // RUN ON YOUR OWN DATA
-    println("Running the pipeline on the provided data...")
-    
-    // Print inputs (the timing isn't right with with view(), so do this instead)
-    // Although view() has the advantage that it gives the absolute path (sc_input_ch.view())
-    if (params.verbose) {
-        println("Single-cell reference dataset:")
-        println(file(params.sc_input))
-
-        println("\nSpatial dataset(s):") 
-        // With glob pattern, there will be multiple files
-        params.sp_input =~ /\*/ ? file(params.sp_input).each{println "$it"} : println (file(params.sp_input))
-    }
-
-    sc_input_ch = Channel.fromPath(params.sc_input) // Can only have 1 file
-    sp_input_ch = Channel.fromPath(params.sp_input) // Can have one or more files
-
-    runMethods(sc_input_ch, sp_input_ch)
-}
+for f in output_files:
+    rule_name = f
+    rule rule_name:
+        input:
+            f

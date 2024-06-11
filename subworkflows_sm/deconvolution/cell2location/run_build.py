@@ -4,7 +4,7 @@ import configparser
 import yaml
 
 # Lire le fichier de configuration YAML
-with open("subworkflows_sm/subworkflows/deconvolution/cell2location/my_config.yaml", "r") as config_file:
+with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
 def build_cell2location_model(sc_input, output_dir ):
@@ -24,7 +24,7 @@ def build_cell2location_model(sc_input, output_dir ):
     print(f"Building cell2location model with {'GPU' if params['gpu'] else 'CPU'}...")
     import os
     command = [
-        "bash", "-c", f"source activate cell2loc_env && python subworkflows_sm/subworkflows/deconvolution/cell2location/build_model.py {sc_input} {cuda_device} -a {params['annot']} {sample_id_arg} {epochs} {args} -o {output_dir} -p 5"
+        "bash", "-c", f"source activate cell2loc_env && python subworkflows_sm/deconvolution/cell2location/build_model.py {sc_input} {cuda_device} -a {params['annot']} {sample_id_arg} {epochs} {args} -o {output_dir} -p 5"
     ]
     print(command)
     subprocess.run(command, check=True)

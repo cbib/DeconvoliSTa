@@ -8,7 +8,7 @@ def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
 # # Lire le fichier de configuration YAML
-with open("subworkflows_sm/subworkflows/deconvolution/cell2location/my_config.yaml", "r") as config_file:
+with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
 def fit_cell2location_model(sp_input, model, output_dir):
@@ -32,7 +32,7 @@ def fit_cell2location_model(sp_input, model, output_dir):
     print(f"{sp_input}")
     # print(f"sp_input.split(',')[0]" {sp_input.split(",")[0]})
     command = [
-        "bash", "-c", f"source activate cell2loc_env && python subworkflows_sm/subworkflows/deconvolution/cell2location/fit_model.py {sp_input.split(',')[0]} {model} {cuda_device} {epochs} {args} -o {output_dir} -p 5 && mv {output_dir}/proportions.tsv {output_dir}/{output}"
+        "bash", "-c", f"source activate cell2loc_env && python subworkflows_sm/deconvolution/cell2location/fit_model.py {sp_input.split(',')[0]} {model} {cuda_device} {epochs} {args} -o {output_dir} -p 5 && mv {output_dir}/proportions.tsv {output_dir}/{output}"
     ]
     print(command)
     subprocess.run(command, check=True)

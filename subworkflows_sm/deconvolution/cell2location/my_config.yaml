@@ -1,17 +1,11 @@
-# mu_config.yaml
-sc_input: "../../../unit-test/test_sc_data.rds"
-sp_input: "../../../unit-test/test_sp_data.rds"
-sp_input_rds: "../../../unit-test/test_sp_data_rds.rds"
+# my_config.yaml
 
-gpu: true
-cuda_device: "cuda:0"
-
-rootdir: "."
-output_dir: "."
+gpu: false
+cuda_device: 0
 
 sampleID: "none"
-epoch_build: "default"
-epoch_fit: "default"
+epoch_build: "3"
+epoch_fit: "3"
 annot: "subclass"
 deconv_args:
   cell2location:
