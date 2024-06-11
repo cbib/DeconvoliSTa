@@ -19,11 +19,26 @@ runID_props = params["runID_props"]
 
 
 include: "subworkflows_sm/subworkflows/deconvolution/run_methods.smk"
+include: "subworkflows_sm/subworkflows/evaluation/evaluate_methods.smk"
 output_dir = config["output"]
 
-
+print("methods = ", methods)
 output= [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
+metrics_files = [f"{output_dir}/metrics/metrics_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
 
 rule main:
     input:
-        output
+        output_files,
+        metrics_files
+
+# rule generate_proportions:
+#     input:
+#         output_files
+        
+
+
+# rule generate_metrics:
+#     input:
+#         metrics_files
+#     shell:
+#         "echo 'Metrics generation complete'"

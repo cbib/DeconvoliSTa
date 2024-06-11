@@ -13,3 +13,11 @@ nextflow run -profile local,docker subworkflows_sm/subworkflows/data_generation/
 
 
 snakemake -s subworkflows_sm/subworkflows/data_generation/generate_data.smk -c1 --config sc_input="unit-test/test_sp_data.rds" dataset_type="artificial_uniform_distinct" reps=1 rootdir="." --use-singularity
+
+
+pour runer:
+
+nextflow run main.nf -profile local,docker --mode run_dataset --sc_input unit-test/test_sc_data.rds --sp_input unit-test/test_sp_data.rds --annot subclass --methods rctd 
+
+
+snakemake -s  main.smk -c8 --config methods=cell2location sc_input="unit-test/test_sc_data.rds" sp_input="unit-test/test_sp_data.rds" output="res" --use-singularity
