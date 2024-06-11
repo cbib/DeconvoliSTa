@@ -1,33 +1,36 @@
+
 import os
 import sys
 import yaml
 
 # Lire le fichier de configuration YAML
-with open("cell2location/my_config.yaml", "r") as config_file:
+with open("subworkflows_sm/subworkflows/deconvolution/cell2location/my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
-
-# Charger les paramètres de configuration nécessaires
-methods =  config["methods"] else "cell2location"  # Par défaut, utiliser "cell2location" si non spécifié
-sc_input = config["sc_input"]
-sp_input = config["sp_input"]
-output_suffix = get_basename(sp_input)
-runID_props = params["runID_props"]
-
-# Définir la règle principale qui inclut le pipeline approprié en fonction de la méthode
-if methods == "cell2location":
-    include: "cell2location/run_cell2location.smk"
-elif methods == "RCTD":
-    include: "rctd/run_rctd.smk"
-else:
-    raise ValueError(f"Unsupported methods: {methods}")
 
 # Fonction pour obtenir le nom de base du fichier sans extension
 def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
-output= f"proportions_{methods}_{output_suffix}{runID_props}.preformat"
+# Charger les paramètres de configuration nécessaires
+methods = config["methods"].split(',')   
+sc_input = config["sc_input"]
+sp_input = config["sp_input"]
+output_dir = config["output"]
 
-# Règle all générique qui pourrait être adaptée en fonction de la méthode
-rule all:
-    input:
-        out = output
+output_suffix = get_basename(sp_input)
+runID_props = params["runID_props"]
+
+# Inclure dynamiquement les pipelines appropriés en fonction des méthodes
+for method in methods:
+    method = method.strip()  
+    include: f"{method}/run_{method}.smk"
+
+# Générer une liste des fichiers de sortie pour chaque méthode
+# output_files = [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.preformat" for method in methods]
+output_files = [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
+
+for f in output_files:
+    rule_name = f
+    rule rule_name:
+        input:
+            f

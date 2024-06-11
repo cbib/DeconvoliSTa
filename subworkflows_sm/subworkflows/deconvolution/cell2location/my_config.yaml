@@ -1,13 +1,7 @@
-# mu_config.yaml
-# sc_input: "../../../../unit-test/test_sc_data.rds"
-# sp_input: "../../../../unit-test/test_sp_data.rds"
-# sp_input_rds: "../../../../unit-test/test_sp_data_rds.rds"
+# my_config.yaml
 
 gpu: false
 cuda_device: 0
-
-# rootdir: "/home/abderahim"
-output_dir: "."
 
 sampleID: "none"
 epoch_build: "3"
