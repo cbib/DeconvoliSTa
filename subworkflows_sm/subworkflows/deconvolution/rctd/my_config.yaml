@@ -1,0 +1,8 @@
+# my_config.yaml
+
+runID_props: "_001"
+runID_metrics: "_metricsID"
+annot : "celltype"
+# Paramètres spécifiques au workflow
+
+deconv_args: ""  # Ajoutez des arguments supplémentaires si nécessaire

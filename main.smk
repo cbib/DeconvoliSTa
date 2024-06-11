@@ -30,15 +30,3 @@ rule main:
     input:
         output_files,
         metrics_files
-
-# rule generate_proportions:
-#     input:
-#         output_files
-        
-
-
-# rule generate_metrics:
-#     input:
-#         metrics_files
-#     shell:
-#         "echo 'Metrics generation complete'"
