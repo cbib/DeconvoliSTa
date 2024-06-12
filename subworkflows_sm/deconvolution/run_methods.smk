@@ -30,7 +30,6 @@ for method in methods:
 output_files = [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
 
 for f in output_files:
-    rule_name = f
-    rule rule_name:
+    rule:
         input:
             f

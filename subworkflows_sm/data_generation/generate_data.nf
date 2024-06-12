@@ -27,10 +27,19 @@ process generate_synthetic_data {
         path ("$output")
 
     script:
+        // output = "${file(sc_input).getSimpleName()}_${dataset_type}_rep${rep}.rds"
+        // """
+        // Rscript $params.rootdir/subworkflows/data_generation/generate_synthetic_data.R \
+        //         --sc_input $sc_input --dataset_type $dataset_type --rep $rep $args
+        // """
         output = "${file(sc_input).getSimpleName()}_${dataset_type}_rep${rep}.rds"
-        """
+        cmd = """
         Rscript $params.rootdir/subworkflows/data_generation/generate_synthetic_data.R \
                 --sc_input $sc_input --dataset_type $dataset_type --rep $rep $args
+        """
+        log.info("Command executed: \n $cmd")
+        """
+        $cmd
         """
 }
 
@@ -67,3 +76,10 @@ workflow generateSyntheticData {
 workflow {
     generateSyntheticData()
 }
+
+
+// --sc_input silver_standard_1_brain_cortex.rds 
+// --dataset_type real --rep 8 --clust_var celltype 
+// --region_var brain_subregion --n_regions 5 --dataset_id 1 
+// --n_spots_min 100 --n_spots_max 200 --n_spots 1000 
+// --visium_mean 20000 --visium_sd 5000

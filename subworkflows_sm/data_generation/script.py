@@ -1,4 +1,3 @@
-
 import shutil
 synthspot_types_map = {
     'aud': "artificial_uniform_distinct", 
@@ -17,35 +16,31 @@ synthspot_types_map = {
     'adom': "artificial_diverse_overlap_missing_celltype_sc"
 }
 
+
 synthspot_types_fullnames = list(synthspot_types_map.values())
 synthspot_types_flat = synthspot_types_flat = [item for sublist in synthspot_types_map.items() for item in sublist] #All key and values in a list
 
 def create_file_if_not_exists(file_path):
-    # Obtenir le répertoire du chemin du fichier
     directory = os.path.dirname(file_path)
-
-    # Créer le répertoire s'il n'existe pas
     if directory and not os.path.exists(directory):
         os.makedirs(directory)
-
-    # Créer le fichier s'il n'existe pas
     if not os.path.exists(file_path):
         with open(file_path, 'w') as f:
             pass  # Ne rien écrire, juste créer le fichier vide
 
 def generate_synthetic_data(sc_input, dataset_type, rep, rootdir, outdir, args=None):
-    output_file = f"{os.path.splitext(sc_input)[0]}_{dataset_type}_rep{rep}.rds"
+    output_file = f"{os.path.basename(sc_input).split('.')[0]}_{dataset_type}_rep{rep}.rds"
     create_file_if_not_exists(output_file)
     args_str = args if args else ''
     shell_command = (
-        f"Rscript {rootdir}/subworkflows/data_generation/generate_synthetic_data.R "
-        f"--sc_input {sc_input} --dataset_type {dataset_type} --rep {rep} {args_str}"
+        f"Rscript subworkflows_sm/data_generation/generate_synthetic_data.R "
+        f"--sc_input {sc_input} --dataset_type {dataset_type} --rep {rep}  --clust_var celltype --region_var brain_subregion --n_regions 5 --dataset_id 1 --n_spots_min 100 --n_spots_max 200 --n_spots 1000 --visium_mean 20000 --visium_sd 5000"
     )
     print(shell_command)
     os.system(shell_command)
     # Copy the output file to the output directory
-    # output_path = os.path.join(outdir, output_file)
-    # shutil.copy(output_file, output_path)
+    output_path = os.path.join(outdir, output_file)
+    shutil.move(output_file, output_path)
 
 def list_to_dict(flat_list):
     flat_list[0] = flat_list[0].replace("{", "")
@@ -67,10 +62,7 @@ if __name__ == "__main__":
     import sys  
     # Récupérer tous les arguments de la ligne de commande
     args = sys.argv
-    # print(args[1:])
-    # config = ast.literal_eval(args[1:])*
     config  = list_to_dict(args[1:])
-    # print(config)
 
     sc_input = config["sc_input"]
     dataset_type = config["dataset_type"]
@@ -100,11 +92,8 @@ if __name__ == "__main__":
     for dataset_type in synthspot_type_input:
         for rep in range(1, int(reps) + 1):
             output_file = f"{os.path.splitext(os.path.basename(sc_input))[0]}_{dataset_type}_rep{rep}.rds"
-            output_path = os.path.join("path/to/synthetic/data", output_file)
+            output_path = os.path.join("synthetic_data_sm", output_file)
             if not os.path.exists(output_path):
-                print("this is the fiiiiiile", output_file)
                 # Ensure Snakemake knows about the generated files
-                # shell(f"touch {output_path}")
                 result = subprocess.run(['touch', '{output_file}'], capture_output=True, text=True)
-
-                generate_synthetic_data(sc_input_conv, dataset_type, rep, rootdir, "path/to/synthetic/data", synthspot_args_input)
+                generate_synthetic_data(sc_input_conv, dataset_type, rep, rootdir, "synthetic_data_sm", synthspot_args_input)

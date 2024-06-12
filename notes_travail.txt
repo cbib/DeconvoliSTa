@@ -12,8 +12,8 @@ lancer les calculs sur Sila.
 nextflow run -profile local,docker subworkflows_sm/subworkflows/data_generation/generate_data.nf -c my_config.config
 
 
-snakemake -s subworkflows_sm/subworkflows/data_generation/generate_data.smk -c1 --config sc_input="unit-test/test_sp_data.rds" dataset_type="artificial_uniform_distinct" reps=1 rootdir="." --use-singularity
-
+snakemake -s subworkflows_sm/data_generation/generate_data.smk -c4 --config sc_input="standards/reference/silver_standard_1_brain_cortex.rds" dataset_type="real" reps=1 rootdir
+="." --use-singularity
 
 pour runer:
 

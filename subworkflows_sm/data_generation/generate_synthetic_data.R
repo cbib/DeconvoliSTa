@@ -25,11 +25,11 @@ library(Seurat)
 library(synthspot)
 
 seurat_obj_scRNA <- readRDS(par$sc_input)
-cat (seurat_obj_scRNA)
+# cat (seurat_obj_scRNA)
 if (!is.null(par$seed)) { set.seed(as.numeric(par$seed)) }
 if (par$dataset_type == "prior_from_data"){
-    cat("Generating synthetic visium data from", par$sc_input, "with input composition as cell type priors...\n")
-    cat(par$n_spots, "spots will be generated, with mean =", par$visium_mean, "and SD =", par$visium_sd, "per spot.\n")
+    # cat("Generating synthetic visium data from", par$sc_input, "with input composition as cell type priors...\n")
+    # cat(par$n_spots, "spots will be generated, with mean =", par$visium_mean, "and SD =", par$visium_sd, "per spot.\n")
     synthetic_visium_data <- generate_synthetic_visium_lite(
                               seurat_obj = seurat_obj_scRNA,
                               clust_var = par$clust_var,
@@ -37,9 +37,9 @@ if (par$dataset_type == "prior_from_data"){
                               visium_mean = as.numeric(par$visium_mean),
                               visium_sd = as.numeric(par$visium_sd))
 } else {
-    cat("Generating synthetic visium data from", par$sc_input, "with dataset type", par$dataset_type, "...\n")
-    cat(par$n_regions, "regions will be generated with", par$n_spots_min, "to", par$n_spots_max,
-        "spots per region, and mean =", par$visium_mean, "and SD =", par$visium_sd, "per spot.\n")
+    # cat("Generating synthetic visium data from", par$sc_input, "with dataset type", par$dataset_type, "...\n")
+    # cat(par$n_regions, "regions will be generated with", par$n_spots_min, "to", par$n_spots_max,
+        # "spots per region, and mean =", par$visium_mean, "and SD =", par$visium_sd, "per spot.\n")
     synthetic_visium_data <- generate_synthetic_visium(
                               seurat_obj = seurat_obj_scRNA,
                               dataset_type = par$dataset_type,

@@ -23,7 +23,7 @@ deconv_args = params['deconv_args']
 script_dir = os.path.dirname(os.path.abspath(__file__))
 rctd_script = "subworkflows_sm/deconvolution/rctd/script_nf.R"
 annot = params['annot']
-rule all:
+rule rctd:
     input:
         output
 
@@ -43,3 +43,4 @@ rule run_rctd:
             --sc_input {input.sc_input} --sp_input {input.sp_input} \
             --annot {annot} --output {output} --num_cores {threads} {deconv_args}
         """
+
