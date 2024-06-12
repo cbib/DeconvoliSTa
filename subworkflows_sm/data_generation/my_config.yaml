@@ -1,0 +1,10 @@
+# config.yaml
+clust_var: celltype
+region_var: brain_subregion
+n_regions: 5
+dataset_id: 1
+n_spots_min: 100
+n_spots_max: 200
+n_spots: 1000
+visium_mean: 20000
+visium_sd: 5000

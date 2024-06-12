@@ -63,9 +63,20 @@ deconv_matrix <- as.matrix(sweep(RCTD_deconv@results$weights, 1, rowSums(RCTD_de
 colnames(deconv_matrix) <- stringr::str_replace_all(colnames(deconv_matrix), "[/ .&-]", "")
 deconv_matrix <- deconv_matrix[,sort(colnames(deconv_matrix), method="shell")]
 
-if (nrow(deconv_matrix) != ncol(spatial_data)){
+# cat ("nrow(deconv_matrix)", nrow(deconv_matrix) , "ncol(spatial_data))" , ncol(spatial_data))
+# print (spatial_data)
+# print (spatial_data[1:10])
+# print('\n')
+# print (dim(spatial_data))
+# print (dim(deconv_matrix))
+
+# cat("hahahahhhhhhhhhh\n")
+# head(deconv_matrix, 5)
+
+if (nrow(deconv_matrix) != ncol(spatial_data$counts)){
+    cat ("okkkkkk\n")
   message("The following rows were removed, possibly due to low number of genes: ",
-          paste0("'", colnames(spatial_data)[!colnames(spatial_data) %in% rownames(deconv_matrix)], "'", collapse=", "))
+          paste0("'", colnames(spatial_data$counts)[!colnames(spatial_data$counts) %in% rownames(deconv_matrix)], "'", collapse=", "))
 }
 
 write.table(deconv_matrix, file=par$output, sep="\t", quote=FALSE, row.names=FALSE)

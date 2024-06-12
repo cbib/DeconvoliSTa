@@ -1,0 +1,14 @@
+# my_config.yaml
+
+runID_props: "_001"
+runID_metrics: "_metricsID"
+
+# Paramètres spécifiques au workflow
+params:
+  outdir:
+    metrics: "path/to/metrics/output_directory"
+  remap_annot: false  # Si ce paramètre n'est pas nécessaire, vous pouvez le supprimer ou le laisser vide
+
+# Arguments spécifiques à l'évaluation
+deconv_args:
+  computeMetrics: ""  # Ajoutez des arguments supplémentaires si nécessaire

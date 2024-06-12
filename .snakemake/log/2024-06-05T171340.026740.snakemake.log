@@ -1,0 +1,25 @@
+Building DAG of jobs...
+Using shell: /usr/bin/bash
+Provided cores: 1 (use --cores to define parallelism)
+Rules claiming more threads will be scaled down.
+Singularity containers: ignored
+Job stats:
+job                      count
+---------------------  -------
+generateSyntheticData        1
+total                        1
+
+Select jobs to execute...
+Execute 1 jobs...
+
+[Wed Jun  5 17:13:40 2024]
+localrule generateSyntheticData:
+    input: unit-test/test_sp_data.rds
+    output: path/to/synthetic/data/test_sp_data_artificial_uniform_distinct_rep1.rds
+    jobid: 0
+    reason: Missing output files: path/to/synthetic/data/test_sp_data_artificial_uniform_distinct_rep1.rds
+    resources: tmpdir=/tmp
+
+RuleException in rule generateSyntheticData in file /home/abderahim/spotless_depot/spotless-benchmark-snakemaked/spotless-benchmark/subworkflows_sm/subworkflows/data_generation/generate_data.smk, line 42:
+NameError: The name 'rootdir' is unknown in this context. Please make sure that you defined that variable. Also note that braces not used for variable access have to be escaped by repeating them, i.e. {{print $1}}, when formatting the following:
+python3 script.py {input.sc_input} {rootdir} {rep} {args} {config}

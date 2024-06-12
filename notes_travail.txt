@@ -7,3 +7,33 @@ run_methods.nf fait appel à la méthode de run de la méthode prise en parametr
 subworkflows/deconvolution/$methode/run_method.nf definie pour chaque methode.
 
 lancer les calculs sur Sila.
+
+
+nextflow run -profile local,docker subworkflows_sm/subworkflows/data_generation/generate_data.nf -c my_config.config
+
+
+snakemake -s subworkflows_sm/data_generation/generate_data.smk -c4 --config sc_input="standards/reference/silver_standard_1_brain_cortex.rds" dataset_type="real" reps=1 rootdir
+="." --use-singularity
+
+pour runer:
+
+nextflow run main.nf -profile local,docker --mode run_dataset --sc_input unit-test/test_sc_data.rds --sp_input unit-test/test_sp_data.rds --annot subclass --methods rctd 
+
+
+snakemake -s  main.smk -c8 --config methods=cell2location sc_input="unit-test/test_sc_data.rds" sp_input="unit-test/test_sp_data.rds" output="res" --use-singularity
+
+
+
+
+
+
+
+##############################"
+
+execute with gpu:
+
+snakemake -s  main.smk -c8 --config mode="run_dataset" methods=cell2location,rctd sc_input="unit-test/test_sc_data.rds" sp_input="unit-test/test_sp_data.rds" output="res" use_gpu="true" --use-singularity --singularity-args '\--nv'
+
+execute with cpu:
+
+snakemake -s  main.smk -c8 --config mode="run_dataset" methods=cell2location,rctd sc_input="unit-test/test_sc_data.rds" sp_input="unit-test/test_sp_data.rds" output="res" use_gpu="false" --use-singularity
