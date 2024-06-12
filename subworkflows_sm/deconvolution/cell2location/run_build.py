@@ -7,7 +7,7 @@ import yaml
 with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
-def build_cell2location_model(sc_input, output_dir ):
+def build_cell2location_model(sc_input, output_dir, use_gpu):
     """
     Build cell2location model.
     
@@ -18,10 +18,9 @@ def build_cell2location_model(sc_input, output_dir ):
     sample_id_arg = f"-s {params['sampleID']}" if params['sampleID'] != "none" else ""
     epochs = f"-e {params['epoch_build']}" if params['epoch_build'] != "default" else ""
     args = params.get('deconv_args', {}).get('cell2location', {}).get('build', "")
-    cuda_device = "cpu"
-    # output_dir = params.get('output_dir', '.')
-    
-    print(f"Building cell2location model with {'GPU' if params['gpu'] else 'CPU'}...")
+    cuda_device = params["cuda_device"] if use_gpu == "true" else "cpu"
+    run_dev = 'GPU' if use_gpu == "true" else 'CPU'
+    print(f"Building cell2location model with {run_dev}...")
     import os
     command = [
         "bash", "-c", f"source activate cell2loc_env && python subworkflows_sm/deconvolution/cell2location/build_model.py {sc_input} {cuda_device} -a {params['annot']} {sample_id_arg} {epochs} {args} -o {output_dir} -p 5"
@@ -41,5 +40,7 @@ if __name__ == "__main__":
     args = sys.argv
     sc_input  = args[1]
     output_dir = args[2]
-    build_cell2location_model(sc_input, output_dir)
+    use_gpu = args[3]
+
+    build_cell2location_model(sc_input, output_dir, use_gpu)
   

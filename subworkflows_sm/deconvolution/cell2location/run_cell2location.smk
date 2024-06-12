@@ -18,6 +18,7 @@ output_suffix = get_basename(sp_input)
 runID_props = params["runID_props"]
 method = "cell2location"
 formatted_output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
+use_gpu = config["use_gpu"]
 
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -51,7 +52,7 @@ rule build_cell2location:
         "docker://csangara/sp_cell2location:latest"
     shell:
         """
-        python3 subworkflows_sm/deconvolution/cell2location/run_build.py {input[0]} {output_dir}
+        python3 subworkflows_sm/deconvolution/cell2location/run_build.py {input[0]} {output_dir} {use_gpu}
         """
 
 rule fit_cell2location:
@@ -64,7 +65,7 @@ rule fit_cell2location:
         "docker://csangara/sp_cell2location:latest"
     shell:
         """
-        python3 subworkflows_sm/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir}
+        python3 subworkflows_sm/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu}
         """
 
 rule format_tsv_file:

@@ -11,7 +11,7 @@ def get_basename(file_path):
 with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
-def fit_cell2location_model(sp_input, model, output_dir):
+def fit_cell2location_model(sp_input, model, output_dir, use_gpu):
     """
     Fit cell2location model.
     
@@ -24,10 +24,11 @@ def fit_cell2location_model(sp_input, model, output_dir):
     output = f"proportions_cell2location_{output_suffix}{params['runID_props']}.preformat"
     epochs = f"-e {params['epoch_fit']}" if params['epoch_fit'] != "default" else ""
     args = params.get('deconv_args', {}).get('cell2location', {}).get('fit', "")
-    cuda_device = "cpu"
+    cuda_device = params["cuda_device"] if use_gpu == "true" else "cpu"
     # output_dir = params.get('output_dir', '.')
     
-    print(f"Fitting cell2location model from file {model} with {'GPU' if params['gpu'] else 'CPU'}...")
+    run_dev = 'GPU' if use_gpu == "true" else 'CPU'
+    print(f"Fitting cell2location model from file {model} with {run_dev}...")
     print(f"Arguments: {args}")
     print(f"{sp_input}")
     # print(f"sp_input.split(',')[0]" {sp_input.split(",")[0]})
@@ -50,5 +51,6 @@ if __name__ == "__main__":
     sp_input  = args[1]
     model = args[2]
     output_dir = args[3]
-    fit_cell2location_model(sp_input, model, output_dir)
+    use_gpu = args[4]
+    fit_cell2location_model(sp_input, model, output_dir, use_gpu)
   

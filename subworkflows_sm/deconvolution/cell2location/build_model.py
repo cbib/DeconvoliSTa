@@ -33,8 +33,8 @@ def main():
 
     
     args = prs.parse_args()
-    # cuda_device = args.cuda_device a regler
-    cuda_device = "cpu"
+    cuda_device = args.cuda_device
+    # cuda_device = "cpu"
     print("cuda device = ", cuda_device)
     import os
 

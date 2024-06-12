@@ -1,6 +1,6 @@
 # my_config.yaml
 
-gpu: false
+# gpu: true
 cuda_device: 0
 
 sampleID: "none"

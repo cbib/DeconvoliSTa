@@ -21,3 +21,19 @@ nextflow run main.nf -profile local,docker --mode run_dataset --sc_input unit-te
 
 
 snakemake -s  main.smk -c8 --config methods=cell2location sc_input="unit-test/test_sc_data.rds" sp_input="unit-test/test_sp_data.rds" output="res" --use-singularity
+
+
+
+
+
+
+
+##############################"
+
+execute with gpu:
+
+snakemake -s  main.smk -c8 --config mode="run_dataset" methods=cell2location,rctd sc_input="unit-test/test_sc_data.rds" sp_input="unit-test/test_sp_data.rds" output="res" use_gpu="true" --use-singularity --singularity-args '\--nv'
+
+execute with cpu:
+
+snakemake -s  main.smk -c8 --config mode="run_dataset" methods=cell2location,rctd sc_input="unit-test/test_sc_data.rds" sp_input="unit-test/test_sp_data.rds" output="res" use_gpu="false" --use-singularity
