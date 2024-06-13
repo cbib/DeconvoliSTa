@@ -22,7 +22,7 @@ deconv_args = params['deconv_args']
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
 rctd_script = "subworkflows_sm/deconvolution/rctd/script_nf.R"
-annot = params['annot']
+annot = config["annot"] if "annot" in config.keys() else params['annot']
 rule rctd:
     input:
         output

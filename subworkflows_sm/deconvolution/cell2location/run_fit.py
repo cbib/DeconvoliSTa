@@ -24,6 +24,8 @@ def fit_cell2location_model(sp_input, model, output_dir, use_gpu):
     output = f"proportions_cell2location_{output_suffix}{params['runID_props']}.preformat"
     epochs = f"-e {params['epoch_fit']}" if params['epoch_fit'] != "default" else ""
     args = params.get('deconv_args', {}).get('cell2location', {}).get('fit', "")
+    # p_parameter = f"-p 5"
+
     cuda_device = params["cuda_device"] if use_gpu == "true" else "cpu"
     # output_dir = params.get('output_dir', '.')
     
@@ -33,7 +35,7 @@ def fit_cell2location_model(sp_input, model, output_dir, use_gpu):
     print(f"{sp_input}")
     # print(f"sp_input.split(',')[0]" {sp_input.split(",")[0]})
     command = [
-        "bash", "-c", f"source activate cell2loc_env && python subworkflows_sm/deconvolution/cell2location/fit_model.py {sp_input.split(',')[0]} {model} {cuda_device} {epochs} {args} -o {output_dir} -p 5 && mv {output_dir}/proportions.tsv {output_dir}/{output}"
+        "bash", "-c", f"source activate cell2loc_env && python subworkflows_sm/deconvolution/cell2location/fit_model.py {sp_input.split(',')[0]} {model} {cuda_device} {epochs} {args} -o {output_dir}  && mv {output_dir}/proportions.tsv {output_dir}/{output}"
     ]
     print(command)
     subprocess.run(command, check=True)

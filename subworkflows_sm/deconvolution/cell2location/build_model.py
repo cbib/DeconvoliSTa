@@ -34,15 +34,8 @@ def main():
     
     args = prs.parse_args()
     cuda_device = args.cuda_device
-    # cuda_device = "cpu"
     print("cuda device = ", cuda_device)
     import os
-
-    # # Obtenir le répertoire de travail actuel
-    # current_directory = os.getcwd()
-
-    # # Afficher le répertoire de travail actuel
-    # print("Le répertoire racine de l'exécution du programme est :", current_directory)
 
     assert (cuda_device.isdigit() or cuda_device == "cpu"), "invalid device id"
     assert os.path.exists(args.sc_data_path), f"{args.sc_data_path} sc file not found"

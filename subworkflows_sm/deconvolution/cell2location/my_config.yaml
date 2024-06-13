@@ -1,11 +1,10 @@
 # my_config.yaml
 
-# gpu: true
 cuda_device: 0
 
 sampleID: "none"
-epoch_build: "3"
-epoch_fit: "3"
+epoch_build: "default"
+epoch_fit: "default"
 annot: "subclass"
 deconv_args:
   cell2location:
