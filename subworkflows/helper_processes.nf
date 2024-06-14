@@ -15,11 +15,14 @@ process convertBetweenRDSandH5AD {
     script:
         file_basename = file(file_to_convert).getSimpleName()
         """
+        start_time=\$(date +%s)
         Rscript $params.rootdir/subworkflows/deconvolution/convertBetweenRDSandH5AD.R \
         --input_path $file_to_convert
+        end_time=\$(date +%s)
+        elapsed_time=\$((end_time - start_time))
+        echo "convertBetweenRDSandH5AD took \$elapsed_time seconds" | tee time.log
         """
 }
-
 
 process formatTSVFile {
     tag "format_${method_name}"

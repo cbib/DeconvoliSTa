@@ -81,3 +81,11 @@ nextflow:
             real    6m21,932s
             user    0m34,410s
             sys     0m1,372s
+
+
+
+execute a command with docker container:
+
+singularity exec  "docker://csangara/seuratdisk:latest" Rscript ./scratch.R
+
+
