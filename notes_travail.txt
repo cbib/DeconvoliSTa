@@ -66,3 +66,18 @@ snakemake -s  main.smk -c12 --config mode="run_dataset" methods=rctd sc_input="s
 
 
 
+runtime comp: with same parameters using gpu
+
+snakemake:   real    7m19,582s
+            user    5m16,641s
+            sys     1m26,301s
+        Completed at: 13-Jun-2024 17:36:16
+
+nextflow:
+            Duration    : 6m 17s
+            CPU hours   : 0.1
+            Succeeded   : 8
+
+            real    6m21,932s
+            user    0m34,410s
+            sys     0m1,372s
