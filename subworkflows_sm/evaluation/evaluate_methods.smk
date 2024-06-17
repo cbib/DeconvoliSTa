@@ -24,10 +24,6 @@ print("methods evaluate = ", methods)
 metrics_files = [f"{output_dir}/metrics/metrics_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
 output_files= [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
 
-rule all_metrics:
-    input:
-        output_files, 
-        metrics_files
 
 # Générer dynamiquement les règles pour chaque méthode
 for method in methods:

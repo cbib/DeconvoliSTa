@@ -2,7 +2,7 @@
 import os
 import yaml
 
-with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
+with open("my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
 # # Fonction pour obtenir le nom de base du fichier sans extension
@@ -22,28 +22,6 @@ use_gpu = config["use_gpu"]
 script_dir = os.path.dirname(os.path.abspath(__file__))
 convert_script = "subworkflows_sm/deconvolution/convertBetweenRDSandH5AD.R"
 dirichlet_script = "subworkflows_sm/deconvolution/dirichlet/gen_dirichlet.R"
-
-rule all_dirichlet:
-    input:
-        formatted_output
-
-# rule convertBetweenRDSandH5AD:
-#     input:
-#         sp_rds_file=sp_input,
-#         sc_rds_file=sc_input
-
-#     output:
-#         sp_h5ad_file=f"{get_basename(sp_input)}.h5ad",
-#         sc_h5ad_file=f"{get_basename(sc_input)}.h5ad"
-
-#     singularity:
-#         "docker://csangara/seuratdisk:latest"
-#     shell:
-#         """
-#         Rscript {convert_script} --input_path {input.sc_rds_file}
-#         Rscript {convert_script} --input_path {input.sp_rds_file}
-#         """
-
 
 rule run_dirichlet:
     input:

@@ -4,7 +4,7 @@ import os
 import yaml
 import time
 # Lire le fichier de configuration YAML
-with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
+with open("my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
 # Fonction pour obtenir le nom de base du fichier sans extension
@@ -23,9 +23,6 @@ deconv_args = params['deconv_args']
 script_dir = os.path.dirname(os.path.abspath(__file__))
 rctd_script = "subworkflows_sm/deconvolution/rctd/script_nf.R"
 annot = config["annot"] if "annot" in config.keys() else params['annot']
-rule rctd:
-    input:
-        output
 
 rule run_rctd:
     input:
