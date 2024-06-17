@@ -2,7 +2,7 @@
 
 import os
 import yaml
-
+import time
 # Lire le fichier de configuration YAML
 with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
@@ -36,7 +36,7 @@ rule run_rctd:
     singularity:
         "docker://csangara/sp_rctd:latest"
     threads:
-        8  # Ajuster en fonction des ressources disponibles
+        12
     shell:
         """
         Rscript {rctd_script} \
