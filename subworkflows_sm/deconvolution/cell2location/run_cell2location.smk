@@ -23,9 +23,6 @@ use_gpu = config["use_gpu"]
 script_dir = os.path.dirname(os.path.abspath(__file__))
 convert_script = "subworkflows_sm/deconvolution/convertBetweenRDSandH5AD.R"
 
-rule all:
-    input:
-        formatted_output
 
 rule convertBetweenRDSandH5AD:
     input:

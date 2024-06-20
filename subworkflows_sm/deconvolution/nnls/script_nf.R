@@ -5,7 +5,7 @@ library(nnls)
 library(magrittr)
 
 # Accept command line arguments
-par <- R.utils::commandArgs(trailingOnly=TRUE, asValues=TRUE)
+par <- commandArgs(trailingOnly=TRUE, asValues=TRUE)
 print(par)
 
 ## START ##

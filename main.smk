@@ -3,7 +3,7 @@ import sys
 import yaml
 
 # Lire le fichier de configuration YAML
-with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
+with open("my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 # Fonction pour obtenir le nom de base du fichier sans extension
 def get_basename(file_path):
@@ -24,7 +24,6 @@ if mode  == "run_dataset":
     include: "subworkflows_sm/evaluation/evaluate_methods.smk"
     output_dir = config["output"]
 
-    print("methods = ", methods)
     output= [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
     metrics_files = [f"{output_dir}/metrics/metrics_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
 
