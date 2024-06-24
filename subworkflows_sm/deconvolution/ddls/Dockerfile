@@ -81,10 +81,14 @@ RUN R -e  "BiocManager::install('SingleCellExperiment')"
 RUN R -e "library('SingleCellExperiment')"
 
 
-RUN apt-get update && apt-get install libglib2.0-0t64=2.80.2-2  libglib2.0-bin=2.80.2-2 libmagick++-dev -y --allow-downgrades
-RUN R -e "if ('SpatialExperiment' %in% rownames(installed.packages())) remove.packages('SpatialExperiment')"
+# RUN apt-get update && apt-get install libglib2.0-0t64=2.80.2-2  libglib2.0-bin=2.80.2-2 libmagick++-dev -y --allow-downgrades
+RUN apt-get update && apt-get install libglib2.0-0t64=2.80.2-2  libglib2.0-bin=2.80.2-2  -y --allow-downgrades
 
-RUN R -e "BiocManager::install('SpatialExperiment')"
+RUN apt-get update && apt-get install libmagick++-dev  -y --allow-downgrades
+
+# RUN R -e "if ('SpatialExperiment' %in% rownames(installed.packages())) remove.packages('SpatialExperiment')"
+
+RUN R -e "BiocManager::install('SpatialExperiment', ask=FALSE)"
 RUN R -e "library('SpatialExperiment')"
 
 
@@ -136,7 +140,7 @@ RUN R -e "library('limma')"
 RUN R -e "BiocManager::install('scran')"
 RUN R -e "library('scran')"
 
-RUN apt-get update && apt-get install cmake 
+RUN apt-get update && apt-get install cmake -y
 RUN R -e "BiocManager::install('SpatialExperiment')"
 RUN R -e "library('SpatialExperiment')"
 
@@ -146,3 +150,20 @@ RUN R -e "library('SpatialDDLS')"
 RUN R -e  "install.packages('R.utils')"
 RUN R -e "library('R.utils')"
 
+# Install Python and TensorFlow dependencies
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3.11-venv\
+    && rm -rf /var/lib/apt/lists/*
+
+# # Upgrade pip and install virtualenv
+# RUN pip3 install --upgrade pip && \
+#     pip3 install virtualenv
+
+# Create and activate a virtual environment
+RUN python3 -m venv /venv
+ENV PATH="/venv/bin:$PATH"
+
+# Install TensorFlow within the virtual environment
+RUN pip install tensorflow
