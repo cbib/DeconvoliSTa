@@ -37,6 +37,6 @@ rule run_ddls:
         """
         Rscript {ddls_script} \
             --sc_input {input.sc_input} --sp_input {input.sp_input} \
-            --output {output}
+            --output {output} --epochs 7000 --batch_size 10
         """
 

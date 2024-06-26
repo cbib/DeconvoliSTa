@@ -150,20 +150,42 @@ RUN R -e "library('SpatialDDLS')"
 RUN R -e  "install.packages('R.utils')"
 RUN R -e "library('R.utils')"
 
-# Install Python and TensorFlow dependencies
-RUN apt-get update && apt-get install -y \
-    python3 \
-    python3-pip \
-    python3.11-venv\
-    && rm -rf /var/lib/apt/lists/*
+# # Install Python and TensorFlow dependencies
+# RUN apt-get update && apt-get install -y \
+#     python3 \
+#     python3-pip \
+#     python3.11-venv\
+#     && rm -rf /var/lib/apt/lists/*
 
-# # Upgrade pip and install virtualenv
-# RUN pip3 install --upgrade pip && \
-#     pip3 install virtualenv
 
-# Create and activate a virtual environment
-RUN python3 -m venv /venv
+# # Create and activate a virtual environment
+# RUN python3 -m venv /venv
+# ENV PATH="/venv/bin:$PATH"
+
+# Download and install Python 3.8.0
+RUN wget https://www.python.org/ftp/python/3.8.0/Python-3.8.0.tgz \
+    && tar -xf Python-3.8.0.tgz \
+    && cd Python-3.8.0 \
+    && ./configure --enable-optimizations \
+    && make -j 8 \
+    && make altinstall \
+    && cd .. \
+    && rm -rf Python-3.8.0 Python-3.8.0.tgz
+
+# Update alternatives to use python3.8 as the default python
+RUN update-alternatives --install /usr/bin/python python /usr/local/bin/python3.8 1
+
+# Install pip for the newly installed Python version
+RUN wget https://bootstrap.pypa.io/get-pip.py \
+    && /usr/local/bin/python3.8 get-pip.py
+
+# Create and activate a virtual environment using Python 3.8
+RUN /usr/local/bin/python3.8 -m venv /venv
 ENV PATH="/venv/bin:$PATH"
+
+
+RUN apt-get update && apt-get install  pkg-config libhdf5-dev -y
+
 
 # Install TensorFlow within the virtual environment
 RUN pip install tensorflow

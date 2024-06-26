@@ -28,7 +28,7 @@ display_versions <- function() {
 
 }
 
-display_versions()
+# display_versions()
 
 
 
@@ -36,6 +36,19 @@ par <- R.utils::commandArgs(trailingOnly=TRUE, asValues=TRUE)
 print(par)
 seurat_obj_scRNA <- readRDS(par$sc_input)
 spatial_seurat_obj <- readRDS(par$sp_input)
+
+# Check if epochs and batch_size are provided, otherwise set default values
+if (is.null(par$epochs)) {
+  epochs <- 100 # default value for epochs
+} else {
+  epochs <- as.integer(par$epochs)
+}
+
+if (is.null(par$batch_size)) {
+  batch_size <- 10
+} else {
+  batch_size <- as.integer(par$batch_size)
+}
 
 
 coordinates <- matrix(0, nrow = dim(spatial_seurat_obj$counts)[2], ncol = 2)
@@ -76,17 +89,17 @@ SDDLS <- genMixedCellProp(
     object = SDDLS,
     cell.ID.column = "Cell_ID",
     cell.type.column = "Cell_Type",
-    num.sim.spots = 50,
+    num.sim.spots = 5000,
     train.freq.cells = 2/3,
     train.freq.spots = 2/3,
     verbose = TRUE
 )
 
-SDDLS <- simMixedProfiles(SDDLS)
+SDDLS <- simMixedProfiles(SDDLS, threads = 8)
 
 SDDLS <- trainDeconvModel(object = SDDLS,
-    batch.size = 10,
-    num.epochs = 5
+    batch.size = batch_size,
+    num.epochs = epochs
 )
 
 
