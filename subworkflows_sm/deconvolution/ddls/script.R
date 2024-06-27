@@ -1,9 +1,13 @@
+ 
+
 library('SingleCellExperiment')
 library('SpatialExperiment')
 library("SpatialDDLS")
 library(Seurat)
 
 library(reticulate)
+
+# use_python("/opt/conda/envs/myenv/bin/python", required = TRUE)
 
 # Function to install TensorFlow if not already installed
 install_tf_if_needed <- function() {
@@ -17,7 +21,7 @@ if (!py_module_available("tensorflow")) {
 }
 }
 
-install_tf_if_needed()
+# install_tf_if_needed()
 
 
 # Function to display versions of Python, TensorFlow, and other packages
@@ -90,7 +94,7 @@ SDDLS <- genMixedCellProp(
     object = SDDLS,
     cell.ID.column = "Cell_ID",
     cell.type.column = "Cell_Type",
-    num.sim.spots = 50, 
+    num.sim.spots = 1000, #5000
     train.freq.cells = 2/3,
     train.freq.spots = 2/3,
     verbose = TRUE
@@ -108,9 +112,9 @@ SDDLS <- trainDeconvModel(object = SDDLS,
     )
 
 #save the model in a HDF5 file  
-#saveTrainedModelAsH5(SDDLS, par$model_save_path, overwrite = TRUE)
-#model <- loadTrainedModelFromH5(SDDLS, par$saved_model, reset.slot = FALSE)
-#trained.model(SDDLS) <- model
+# saveTrainedModelAsH5(SDDLS, par$model_save_path, overwrite = TRUE)
+# model <- loadTrainedModelFromH5(SDDLS, 'ddls_mod_save', reset.slot = FALSE)
+# trained.model(SDDLS) <- trained.model(model)
 
 SDDLS <- loadSTProfiles(
     object = SDDLS,
@@ -143,3 +147,6 @@ backup_file <- "backup_ddls"
 saveRDS(deconv_matrix, file = backup_file)
 message("Backup file saved at: ", backup_file)
 write.table(deconv_matrix, file=par$output, sep="\t", quote=FALSE, row.names=FALSE)
+
+
+

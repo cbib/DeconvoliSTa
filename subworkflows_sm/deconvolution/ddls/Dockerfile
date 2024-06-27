@@ -1,3 +1,4 @@
+ 
 # FROM satijalab/seurat as seurat_image
 
 # # Créer un répertoire pour les bibliothèques R
@@ -398,3 +399,19 @@ RUN R -e "library('SpatialDDLS')"
 RUN R -e  "install.packages('R.utils')"
 RUN R -e "library('R.utils')"
 
+RUN apt-get update && apt-get install libcudnn8
+RUN wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh \
+    && bash miniconda.sh -b -p /opt/conda \
+    && rm miniconda.sh
+
+ENV PATH="/opt/conda/bin:$PATH"
+
+RUN conda create -n myenv python=3.8 -y
+ENV PATH="/opt/conda/envs/myenv/bin:$PATH"
+# Install TensorFlow within the virtual environment
+RUN pip install tensorflow
+
+# Test if GPU is available
+RUN python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+
+RUN apt-get update && apt-get install libcublas-12-0 -y
