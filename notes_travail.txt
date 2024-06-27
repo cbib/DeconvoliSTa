@@ -89,3 +89,18 @@ execute a command with docker container:
 singularity exec  "docker://csangara/seuratdisk:latest" Rscript ./scratch.R
 
 
+
+
+to generate data:
+
+ snakemake -s  main.smk -c12 --config mode="generate_data"  sc_input="standards/reference/gold_standard_1.rds" dataset_type="real" reps=1 rootdir="." --use-singularity 
+
+ generate from golden standars: // 1741 spots
+ snakemake -s  main.smk -c12 --config mode="generate_data"  sc_input="standards/reference/gold_standard_1.rds" dataset_type="aud" reps=1 rootdir="." region_var="celltype_coarse" --use-singularity 
+
+
+
+execution de ddls sur CPU avec epochs 7000 et echantillons 5000
+    real    273m55,758s
+    user    627m30,081s
+    sys     13m9,822s

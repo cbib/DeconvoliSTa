@@ -32,9 +32,10 @@ def generate_synthetic_data(sc_input, dataset_type, rep, rootdir, outdir, args=N
     output_file = f"{os.path.basename(sc_input).split('.')[0]}_{dataset_type}_rep{rep}.rds"
     create_file_if_not_exists(output_file)
     args_str = args if args else ''
+    region_var = config["region_var"] if "region_var" in config.keys()  else 'NULL' # brain_subregion
     shell_command = (
         f"Rscript subworkflows_sm/data_generation/generate_synthetic_data.R "
-        f"--sc_input {sc_input} --dataset_type {dataset_type} --rep {rep}  --clust_var celltype --region_var brain_subregion --n_regions 5 --dataset_id 1 --n_spots_min 100 --n_spots_max 200 --n_spots 1000 --visium_mean 20000 --visium_sd 5000"
+        f"--sc_input {sc_input} --dataset_type {dataset_type} --rep {rep}  --clust_var celltype --region_var {region_var} --n_regions 5 --dataset_id 1 --n_spots_min 100 --n_spots_max 200 --n_spots 1000 --visium_mean 20000 --visium_sd 5000"
     )
     print(shell_command)
     os.system(shell_command)
