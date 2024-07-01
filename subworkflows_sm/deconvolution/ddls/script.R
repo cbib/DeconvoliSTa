@@ -1,13 +1,11 @@
- 
 
 library('SingleCellExperiment')
 library('SpatialExperiment')
 library("SpatialDDLS")
 library(Seurat)
-
 library(reticulate)
 
-# use_python("/opt/conda/envs/myenv/bin/python", required = TRUE)
+use_python("/opt/conda/envs/myenv/bin/python", required = TRUE)
 
 # Function to install TensorFlow if not already installed
 install_tf_if_needed <- function() {
@@ -20,6 +18,16 @@ if (!py_module_available("tensorflow")) {
     message("TensorFlow is already installed.")
 }
 }
+
+
+py_run_string("
+import tensorflow as tf
+if tf.test.is_gpu_available():
+    print('TensorFlow is using the GPU')
+    print('GPU Devices:', tf.config.experimental.list_physical_devices('GPU'))
+else:
+    print('TensorFlow is not using the GPU')
+")
 
 # install_tf_if_needed()
 
@@ -41,6 +49,12 @@ cat("Given arguments are \n")
 print(par)
 seurat_obj_scRNA <- readRDS(par$sc_input)
 spatial_seurat_obj <- readRDS(par$sp_input)
+
+#for test
+seurat_obj_scRNA <- readRDS('/app/unit-test/test_sc_data.rds')
+spatial_seurat_obj <- readRDS('/app/unit-test/test_sp_data.rds')
+epochs = 40
+batch_size=10
 
 # Check if epochs and batch_size are provided, otherwise set default values
 if (is.null(par$epochs)) {
@@ -94,7 +108,7 @@ SDDLS <- genMixedCellProp(
     object = SDDLS,
     cell.ID.column = "Cell_ID",
     cell.type.column = "Cell_Type",
-    num.sim.spots = 1000, #5000
+    num.sim.spots = 50, #5000
     train.freq.cells = 2/3,
     train.freq.spots = 2/3,
     verbose = TRUE
@@ -147,6 +161,3 @@ backup_file <- "backup_ddls"
 saveRDS(deconv_matrix, file = backup_file)
 message("Backup file saved at: ", backup_file)
 write.table(deconv_matrix, file=par$output, sep="\t", quote=FALSE, row.names=FALSE)
-
-
-

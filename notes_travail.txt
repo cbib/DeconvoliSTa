@@ -104,3 +104,7 @@ execution de ddls sur CPU avec epochs 7000 et echantillons 5000
     real    273m55,758s
     user    627m30,081s
     sys     13m9,822s
+
+
+
+nouvelle meilleure execution : 12h30m epochs 7000  et echantillons 7000
