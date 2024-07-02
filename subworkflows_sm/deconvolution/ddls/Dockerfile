@@ -76,13 +76,13 @@ RUN apt-get update && apt-get install  pkg-config libhdf5-dev -y
 
 
 # Install TensorFlow within the virtual environment
-RUN pip install tensorflow
+# RUN pip install tensorflow
 
 
 
 
 # Test if GPU is available
-RUN python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+# RUN python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 
 # Install R dependencies
 # RUN install2.r --error BiocManager version = '3.19'
@@ -223,11 +223,11 @@ ENV PATH="/opt/conda/bin:$PATH"
 
 RUN conda create -n myenv python=3.8 -y
 ENV PATH="/opt/conda/envs/myenv/bin:$PATH"
-# Install TensorFlow within the virtual environment
-RUN pip install tensorflow
+# # Install TensorFlow within the virtual environment
+# RUN pip install tensorflow
 
-# Test if GPU is available
-RUN python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
+# # Test if GPU is available
+# RUN python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"
 
 RUN apt-get update && apt-get install libcublas-12-0 -y
 RUN apt-get update && apt-get install libcudnn8 
@@ -244,3 +244,4 @@ RUN apt install libcublas11 libcublaslt11 && mkdir ~/lib \
 RUN pip uninstall tensorflow -y
 RUN pip install tensorflow[and-cuda]==2.8
 RUN pip install protobuf==3.20.*
+RUN python -c "import tensorflow as tf; print(tf.config.list_physical_devices('GPU'))"

@@ -18,6 +18,7 @@ runID_props = params["runID_props"]
 method = "cell2location"
 formatted_output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
 use_gpu = config["use_gpu"]
+annot = config["annot"] if "annot" in config.keys() else params["annot"]
 
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -57,7 +58,7 @@ rule build_cell2location:
     shell:
         """
         start_time=$(date +%s)
-        python3 subworkflows_sm/deconvolution/cell2location/run_build.py {input[0]} {output_dir} {use_gpu}
+        python3 subworkflows_sm/deconvolution/cell2location/run_build.py {input[0]} {output_dir} {use_gpu} {annot}
         end_time=$(date +%s)
         elapsed_time=$((end_time - start_time))
         echo "build_cell2location took $elapsed_time seconds"
