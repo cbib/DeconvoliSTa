@@ -1,5 +1,7 @@
 # Snakefile
 import os
+import yaml
+
 
 import sys
 synthspot_types_map = {
@@ -21,7 +23,6 @@ synthspot_types_map = {
 
 # Print the full Python version
 print(f"Full Python version: {sys.version}")
-
 rule generateSyntheticData:
     input:
         sc_input=config['sc_input']

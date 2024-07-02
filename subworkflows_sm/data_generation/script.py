@@ -16,6 +16,27 @@ synthspot_types_map = {
     'adom': "artificial_diverse_overlap_missing_celltype_sc"
 }
 
+#yaml is not installed in docker !
+def lire_config_et_former_options(fichier):
+    options = []
+    with open(fichier, 'r') as file:
+        for line in file:
+            # Ignore les lignes vides et les commentaires
+            line = line.strip()
+            if not line or line.startswith('#'):
+                continue
+            # Sépare la clé et la valeur
+            key, value = line.split(':')
+            key = key.strip()
+            value = value.strip().split(' ')[0]  # Ignore les commentaires inline
+            # Formate la clé en option de ligne de commande
+            option = f"--{key} {value}"
+            options.append(option)
+    print(' '.join(options))
+    # Join all options with a space
+    return ' '.join(options)
+
+gen_arguments = lire_config_et_former_options("subworkflows_sm/data_generation/my_config.yaml")
 
 synthspot_types_fullnames = list(synthspot_types_map.values())
 synthspot_types_flat = synthspot_types_flat = [item for sublist in synthspot_types_map.items() for item in sublist] #All key and values in a list
@@ -28,14 +49,14 @@ def create_file_if_not_exists(file_path):
         with open(file_path, 'w') as f:
             pass  # Ne rien écrire, juste créer le fichier vide
 
-def generate_synthetic_data(sc_input, dataset_type, rep, rootdir, outdir, args=None):
+def generate_synthetic_data(sc_input, dataset_type, rep, rootdir, outdir, annot, args=None ):
     output_file = f"{os.path.basename(sc_input).split('.')[0]}_{dataset_type}_rep{rep}.rds"
     create_file_if_not_exists(output_file)
     args_str = args if args else ''
     region_var = config["region_var"] if "region_var" in config.keys()  else 'NULL' # brain_subregion
     shell_command = (
         f"Rscript subworkflows_sm/data_generation/generate_synthetic_data.R "
-        f"--sc_input {sc_input} --dataset_type {dataset_type} --rep {rep}  --clust_var celltype --region_var {region_var} --n_regions 5 --dataset_id 1 --n_spots_min 100 --n_spots_max 200 --n_spots 1000 --visium_mean 20000 --visium_sd 5000"
+        f"--sc_input {sc_input} --dataset_type {dataset_type} --rep {rep}  --clust_var {annot} --region_var {region_var} {gen_arguments}"
     )
     print(shell_command)
     os.system(shell_command)
@@ -96,5 +117,5 @@ if __name__ == "__main__":
             output_path = os.path.join("synthetic_data_sm", output_file)
             if not os.path.exists(output_path):
                 # Ensure Snakemake knows about the generated files
-                result = subprocess.run(['touch', '{output_file}'], capture_output=True, text=True)
+                # result = subprocess.run(['touch', '{output_file}'], capture_output=True, text=True)
                 generate_synthetic_data(sc_input_conv, dataset_type, rep, rootdir, "synthetic_data_sm", synthspot_args_input)

@@ -113,3 +113,13 @@ nouvelle meilleure execution : 12h30m epochs 7000  et echantillons 7000
 
 run with generated data:
 snakemake -s  main.smk -c8 --config mode="run_dataset" methods=rctd sc_input="standards/reference/gold_standard_1.rds" sp_input="synthetic_data_sm/gold_standard_1_artificial_uniform_distinct_rep1.rds" output="res" use_gpu="true" annot="celltype" --use-singularity --singularity-args '\--nv'
+
+
+
+
+
+################################
+cell2location with 1000obs and 10000 genes
+    real    234m55,233s
+    user    99m7,484s
+    sys     1m18,247s
