@@ -22,6 +22,7 @@ deconv_args = params['deconv_args']
 # Définir le chemin absolu du script R
 ddls_script = "subworkflows_sm/deconvolution/ddls/script.R"
 annot = config["annot"] if "annot" in config.keys() else params['annot']
+use_gpu = config["use_gpu"] if "use_gpu" in config.keys() else "false"
 
 rule run_ddls:
     input:
@@ -30,12 +31,12 @@ rule run_ddls:
     output:
         output
     singularity:
-        "ddls.sif"
+        "docker://abderahim02/sp_ddls:latest" #"ddls.sif"
     threads:
         12
-    shell: # --output {output} --epochs 7000 --batch_size 10
+    shell: # --output {output} --epochs 10000 --batch_size 10
         """
         Rscript {ddls_script} \
             --sc_input {input.sc_input} --sp_input {input.sp_input} \
-            --output {output} --epochs 10000 --batch_size 10
+            --output {output} --epochs 50 --batch_size 10 --use_gpu {use_gpu}
         """

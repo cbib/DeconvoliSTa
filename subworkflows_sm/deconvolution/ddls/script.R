@@ -5,20 +5,36 @@ library("SpatialDDLS")
 library(Seurat)
 library(reticulate)
 
-# use_python("/opt/conda/envs/myenv/bin/python", required = TRUE)
 
-# Function to install TensorFlow if not already installed
-install_tf_if_needed <- function() {
-# Check if TensorFlow is already available
-if (!py_module_available("tensorflow")) {
-    message("TensorFlow not found. Installing TensorFlow...")
-    # Install TensorFlow
-    installTFpython(install.conda = TRUE)
+
+
+# list(
+#     epochs = 100,
+#     batch_size = 10
+# )
+par <- R.utils::commandArgs(trailingOnly=TRUE, asValues=TRUE)
+cat("Given arguments are \n")
+print(par)
+seurat_obj_scRNA <- readRDS(par$sc_input)
+spatial_seurat_obj <- readRDS(par$sp_input)
+use_gpu <- par$use_gpu
+
+if (use_gpu == "true") {
+    use_python("/opt/conda/envs/myenv/bin/python", required = TRUE)
 } else {
-    message("TensorFlow is already installed.")
+    # Function to install TensorFlow if not already installed
+    install_tf_if_needed <- function() {
+        # Check if TensorFlow is already available
+        if (!py_module_available("tensorflow")) {
+            message("TensorFlow not found. Installing TensorFlow...")
+            # Install TensorFlow
+            installTFpython(install.conda = TRUE)
+        } else {
+            message("TensorFlow is already installed.")
+        }
+    }
+    install_tf_if_needed()
 }
-}
-
 
 py_run_string("
 import tensorflow as tf
@@ -28,33 +44,6 @@ if tf.test.is_gpu_available():
 else:
     print('TensorFlow is not using the GPU')
 ")
-
-# install_tf_if_needed()
-
-
-# Function to display versions of Python, TensorFlow, and other packages
-display_versions <- function() {
-python_version <- py_run_string("import sys; print('Python version:', sys.version)")
-tensorflow_version <- py_run_string("import tensorflow as tf; print('TensorFlow version:', tf.__version__)")
-installed_packages <- py_run_string("import pkg_resources; [print(d) for d in pkg_resources.working_set]")
-
-}
-
-# display_versions()
-
-
-
-par <- R.utils::commandArgs(trailingOnly=TRUE, asValues=TRUE)
-cat("Given arguments are \n")
-print(par)
-seurat_obj_scRNA <- readRDS(par$sc_input)
-spatial_seurat_obj <- readRDS(par$sp_input)
-
-#for test
-# seurat_obj_scRNA <- readRDS('/app/unit-test/test_sc_data.rds')
-# spatial_seurat_obj <- readRDS('/app/unit-test/test_sp_data.rds')
-# epochs = 40
-# batch_size=10
 
 # Check if epochs and batch_size are provided, otherwise set default values
 if (is.null(par$epochs)) {
@@ -108,7 +97,7 @@ SDDLS <- genMixedCellProp(
     object = SDDLS,
     cell.ID.column = "Cell_ID",
     cell.type.column = "Cell_Type",
-    num.sim.spots = 5000, #5000
+    num.sim.spots = 50, #5000
     train.freq.cells = 2/3,
     train.freq.spots = 2/3,
     verbose = TRUE

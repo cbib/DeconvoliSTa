@@ -123,3 +123,25 @@ cell2location with 1000obs and 10000 genes
     real    234m55,233s
     user    99m7,484s
     sys     1m18,247s
+
+
+cell2location with 100obs and 10000genes
+real 2 hours, 16 minutes
+
+
+rctd with 1000spots and 10000 genes
+real    41m1,962s
+user    4m17,196s
+sys     0m8,151s
+
+
+rctd with 100spots and 10000 genes
+real    6m51,875s
+user    1m44,752s
+sys     0m5,522s
+
+
+rctd with 10000obs and 10000 genes
+real    60m52,732s
+user    6m54,860s
+sys     0m20,528s
