@@ -12,7 +12,22 @@ def get_basename(file_path):
 # Charger les paramètres de configuration nécessaires
 sc_input = config["sc_input"]
 mode = config["mode"]
-
+synthspot_types_map = {
+    'aud': "artificial_uniform_distinct", 
+    'add': "artificial_diverse_distinct",
+    'auo': "artificial_uniform_overlap", 
+    'ado': "artificial_diverse_overlap",
+    'adcd': "artificial_dominant_celltype_diverse", 
+    'apdcd': "artificial_partially_dominant_celltype_diverse",
+    'adrcd': "artificial_dominant_rare_celltype_diverse", 
+    'arrcd': "artificial_regional_rare_celltype_diverse",
+    'prior': "prior_from_data", 
+    'real': "real", 
+    'rm': "real_missing_celltypes_visium",
+    'arm': "artificial_missing_celltypes_visium", 
+    'addm': "artificial_diverse_distinct_missing_celltype_sc",
+    'adom': "artificial_diverse_overlap_missing_celltype_sc"
+}
 
 if mode  == "run_dataset":
     sp_input = config["sp_input"]
@@ -33,7 +48,7 @@ if mode  == "run_dataset":
             metrics_files
 elif mode == "generate_data":
     generated_files = config["sc_input"]
-    dataset_types = config["dataset_type"].split(',')
+    dataset_types = [synthspot_types_map[t] for t in config['dataset_type'].split(',')]
     reps = config["reps"]
     rootdir = config["rootdir"]
 
