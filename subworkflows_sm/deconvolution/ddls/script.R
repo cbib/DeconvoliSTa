@@ -97,7 +97,7 @@ SDDLS <- genMixedCellProp(
     object = SDDLS,
     cell.ID.column = "Cell_ID",
     cell.type.column = "Cell_Type",
-    num.sim.spots = 50, #5000
+    num.sim.spots = 4000, #5000
     train.freq.cells = 2/3,
     train.freq.spots = 2/3,
     verbose = TRUE
