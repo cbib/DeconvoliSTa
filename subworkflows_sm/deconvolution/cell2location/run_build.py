@@ -3,6 +3,7 @@ import subprocess
 import configparser
 import yaml
 
+
 # Lire le fichier de configuration YAML
 with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
@@ -44,6 +45,6 @@ if __name__ == "__main__":
     use_gpu = args[3]
     annot = args[4]
 
-
+    print()
     build_cell2location_model(sc_input, output_dir, use_gpu, annot)
   

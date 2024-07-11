@@ -38,6 +38,6 @@ rule run_rctd:
         """
         Rscript {rctd_script} \
             --sc_input {input.sc_input} --sp_input {input.sp_input} \
-            --annot {annot} --output {output} --num_cores {threads} {deconv_args}
+            --annot {annot} --output {output} --num_cores {threads} 
         """
 

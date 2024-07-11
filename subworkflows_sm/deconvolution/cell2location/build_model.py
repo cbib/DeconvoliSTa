@@ -6,6 +6,27 @@ import os
 import matplotlib as mpl
 mpl.use('Agg')
 
+
+import sys
+import threading
+
+# Show current recursion limit
+current_recursion_limit = sys.getrecursionlimit()
+print(f"Current recursion limit: {current_recursion_limit}")
+
+# Set a new stack size (e.g., 2MB)
+new_stack_size = 2 * 1024 * 1024  # 2 MB in bytes
+threading.stack_size(new_stack_size)
+
+print(f"New stack size set to: {new_stack_size} bytes")
+
+# Verify the new stack size (applies to new threads only)
+new_thread = threading.Thread(target=lambda: None)
+new_thread.start()
+new_thread.join()
+
+print("New thread created with the new stack size.")
+
 def main():
     ##### PARSING COMMAND LINE ARGUMENTS #####
     prs = arp.ArgumentParser()
@@ -26,8 +47,8 @@ def main():
     
     prs.add_argument('-t', '--tech_column', default = None, nargs='+',
                  type = str, help = "multiplicative technical effects, such as platform effects")
-    
-    prs.add_argument('-e', '--epochs', default=250, type = int, help = "number of epochs to train the model")
+    # 250 1000
+    prs.add_argument('-e', '--epochs', default=25, type = int, help = "number of epochs to train the model")
 
     prs.add_argument('-p', '--posterior_sampling', default=1000, type = int, help = "number of samples to take from the posterior distribution")
 
@@ -82,7 +103,10 @@ def main():
     print("Before filtering: {} cells and {} genes.".format(*adata_scrna_raw.shape))
     from cell2location.utils.filtering import filter_genes
     selected = filter_genes(adata_scrna_raw, cell_count_cutoff=5, cell_percentage_cutoff2=0.03, nonz_mean_cutoff=1.12)
-    adata_scrna_raw = adata_scrna_raw[:, selected].copy()
+    print("After selecting genes.")
+    # adata_scrna_raw = adata_scrna_raw[:, selected]# l erreur
+
+    adata_scrna_raw = adata_scrna_raw[:, selected] # l erreur
     print("After filtering: {} cells and {} genes.".format(*adata_scrna_raw.shape))
 
     print("Preparing anndata for the regression model...")
@@ -92,11 +116,13 @@ def main():
                         # cell type, covariate used for constructing signatures
                         labels_key=args.annotation_column, 
                         # multiplicative technical effects (platform, 3' vs 5', donor effect)
-                        categorical_covariate_keys=args.tech_column)
+                        categorical_covariate_keys=args.tech_column, 
+                        copy=True)
     
     # Run the model - use all data for training (validation not implemented yet, train_size=1)
     from cell2location.models import RegressionModel
     mod = RegressionModel(adata_scrna_raw) 
+    # mod.train(max_epochs=args.epochs, batch_size=2500, train_size=1, lr=0.002, use_gpu=cuda_device.isdigit())
     mod.train(max_epochs=args.epochs, batch_size=2500, train_size=1, lr=0.002, use_gpu=cuda_device.isdigit())
 
     # Export the estimated cell abundance (summary of the posterior distribution).

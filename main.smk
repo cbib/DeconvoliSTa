@@ -29,6 +29,7 @@ synthspot_types_map = {
     'adom': "artificial_diverse_overlap_missing_celltype_sc"
 }
 
+skip_metrics = config["skip_metrics"] if 'skip_metrics' in config.keys() else "false"
 if mode  == "run_dataset":
     sp_input = config["sp_input"]
     methods =  config["methods"].split(',')   
@@ -36,16 +37,20 @@ if mode  == "run_dataset":
     output_suffix = get_basename(sp_input)
     runID_props = params["runID_props"]
     include: "subworkflows_sm/deconvolution/run_methods.smk"
-    include: "subworkflows_sm/evaluation/evaluate_methods.smk"
     output_dir = config["output"]
 
-    output= [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
-    metrics_files = [f"{output_dir}/metrics/metrics_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
-
-    rule main:
-        input:
-            output_files,
-            metrics_files
+    output_files= [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
+    if skip_metrics == "false":
+        include: "subworkflows_sm/evaluation/evaluate_methods.smk"
+        metrics_files = [f"{output_dir}/metrics/metrics_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
+        rule main:
+            input:
+                output_files,
+                metrics_files
+    else:
+        rule main:
+            input:
+                output_files
 elif mode == "generate_data":
     generated_files = config["sc_input"]
     dataset_types = [synthspot_types_map[t] for t in config['dataset_type'].split(',')]
