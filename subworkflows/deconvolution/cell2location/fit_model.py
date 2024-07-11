@@ -15,13 +15,9 @@ def main():
     prs.add_argument('-o','--out_dir', default = os.getcwd() ,
                      type = str, help = 'model and proportions output directory')
 
-    # prs.add_argument('-e', '--epochs', default=30000, type = int, help = "number of epochs to fit the model")
+    prs.add_argument('-e', '--epochs', default=300, type = int, help = "number of epochs to fit the model")
 
-    # prs.add_argument('-p', '--posterior_sampling', default=1000, type = int, help = "number of samples to take from the posterior distribution")
-
-    prs.add_argument('-e', '--epochs', default=3, type = int, help = "number of epochs to fit the model")
-
-    prs.add_argument('-p', '--posterior_sampling', default=5, type = int, help = "number of samples to take from the posterior distribution")
+    prs.add_argument('-p', '--posterior_sampling', default=1000, type = int, help = "number of samples to take from the posterior distribution")
 
     prs.add_argument('-n', '--n_cells_per_location', default=8, type = int, help = "estimated number of cells per spot")
 

@@ -37,3 +37,114 @@ snakemake -s  main.smk -c8 --config mode="run_dataset" methods=cell2location,rct
 execute with cpu:
 
 snakemake -s  main.smk -c8 --config mode="run_dataset" methods=cell2location,rctd sc_input="unit-test/test_sc_data.rds" sp_input="unit-test/test_sp_data.rds" output="res" use_gpu="false" --use-singularity
+
+
+
+#AVEC LES PARAAMETRS PAR default 
+Completed at: 13-Jun-2024 10:42:24
+Duration    : 3m 49s
+CPU hours   : 0.1
+Succeeded   : 8
+
+
+with snakemake : 55m 13 s
+/30000 55:13<00:00,  9.22it/s, Epoch 30000/30000: 100%|█| 30000/30000 [55:13<00:00,  9.22it/s, Epoch 30000/30000: 100%|█| 30000/30000 [55:13<00:00,  9.05it/s, v_num=1, elbo_
+
+
+autres metriques:
+- Corrélation de Spearman et Pearson correlation (almost the same)
+- normalised mean absolute error (nmae) : calculated as mean error divided by the mean of true proportions
+
+
+
+lancer golden standard:
+nextflow run main.nf -profile local,docker --mode run_standard --standard gold_standard_1 -c standards/standard.config --methods rctd
+
+
+lance golden standard avec snakemake:
+snakemake -s  main.smk -c12 --config mode="run_dataset" methods=rctd sc_input="standards/reference/gold_standard_1.rds" sp_input="standards/gold_standard_1/Eng2019_cortex_svz_fov5.rds" output="res" annot="celltype" use_gpu="true" --use-singularity --singularity-args '\--nv'
+
+
+
+runtime comp: with same parameters using gpu
+
+snakemake:   real    7m19,582s
+            user    5m16,641s
+            sys     1m26,301s
+        Completed at: 13-Jun-2024 17:36:16
+
+nextflow:
+            Duration    : 6m 17s
+            CPU hours   : 0.1
+            Succeeded   : 8
+
+            real    6m21,932s
+            user    0m34,410s
+            sys     0m1,372s
+
+
+
+execute a command with docker container:
+
+singularity exec  "docker://csangara/seuratdisk:latest" Rscript ./scratch.R
+
+
+
+
+to generate data:
+
+ snakemake -s  main.smk -c12 --config mode="generate_data"  sc_input="standards/reference/gold_standard_1.rds" dataset_type="real" reps=1 rootdir="." --use-singularity 
+
+ generate from golden standars: // 1741 spots
+ snakemake -s  main.smk -c12 --config mode="generate_data"  sc_input="standards/reference/gold_standard_1.rds" dataset_type="aud" reps=1 rootdir="." region_var="celltype_coarse" --use-singularity 
+
+
+
+execution de ddls sur CPU avec epochs 7000 et echantillons 5000
+    real    273m55,758s
+    user    627m30,081s
+    sys     13m9,822s
+
+
+
+nouvelle meilleure execution : 12h30m epochs 7000  et echantillons 7000
+
+
+
+run with generated data:
+snakemake -s  main.smk -c8 --config mode="run_dataset" methods=rctd sc_input="standards/reference/gold_standard_1.rds" sp_input="synthetic_data_sm/gold_standard_1_artificial_uniform_distinct_rep1.rds" output="res" use_gpu="true" annot="celltype" --use-singularity --singularity-args '\--nv'
+
+
+
+
+
+################################
+cell2location with 1000obs and 10000 genes
+    real    234m55,233s
+    user    99m7,484s
+    sys     1m18,247s
+
+
+cell2location with 100obs and 10000genes
+real 2 hours, 16 minutes
+
+cell2location with 10000obs and 10000 genes
+real 3 hours, 37 minutes
+
+
+rctd with 1000spots and 10000 genes
+real    41m1,962s
+user    4m17,196s
+sys     0m8,151s
+
+
+rctd with 100spots and 10000 genes
+real    6m51,875s
+user    1m44,752s
+sys     0m5,522s
+
+
+rctd with 10000obs and 10000 genes
+real    60m52,732s
+user    6m54,860s
+sys     0m20,528s

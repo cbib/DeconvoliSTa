@@ -1,7 +1,6 @@
-# Snakefile
-
 import os
 import yaml
+import time
 
 # Lire le fichier de configuration YAML
 with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
@@ -19,14 +18,12 @@ runID_props = params["runID_props"]
 method = "cell2location"
 formatted_output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
 use_gpu = config["use_gpu"]
+annot = config["annot"] if "annot" in config.keys() else params["annot"]
 
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
 convert_script = "subworkflows_sm/deconvolution/convertBetweenRDSandH5AD.R"
 
-rule all:
-    input:
-        formatted_output
 
 rule convertBetweenRDSandH5AD:
     input:
@@ -37,10 +34,16 @@ rule convertBetweenRDSandH5AD:
         sp_h5ad_file=temp(f"{get_basename(sp_input)}.h5ad")
     singularity:
         "docker://csangara/seuratdisk:latest"
+    threads:
+        8
     shell:
         """
+        start_time=$(date +%s)
         Rscript {convert_script} --input_path {input.sc_rds_file}
         Rscript {convert_script} --input_path {input.sp_rds_file}
+        end_time=$(date +%s)
+        elapsed_time=$((end_time - start_time))
+        echo "convertBetweenRDSandH5AD took $elapsed_time seconds"
         """
 
 rule build_cell2location:
@@ -50,9 +53,15 @@ rule build_cell2location:
         temp(f"{output_dir}/sc.h5ad")
     singularity:
         "docker://csangara/sp_cell2location:latest"
+    threads:
+        8
     shell:
         """
-        python3 subworkflows_sm/deconvolution/cell2location/run_build.py {input[0]} {output_dir} {use_gpu}
+        start_time=$(date +%s)
+        python3 subworkflows_sm/deconvolution/cell2location/run_build.py {input[0]} {output_dir} {use_gpu} {annot}
+        end_time=$(date +%s)
+        elapsed_time=$((end_time - start_time))
+        echo "build_cell2location took $elapsed_time seconds"
         """
 
 rule fit_cell2location:
@@ -63,9 +72,15 @@ rule fit_cell2location:
         temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
     singularity:
         "docker://csangara/sp_cell2location:latest"
+    threads:
+        8
     shell:
         """
+        start_time=$(date +%s)
         python3 subworkflows_sm/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu}
+        end_time=$(date +%s)
+        elapsed_time=$((end_time - start_time))
+        echo "fit_cell2location took $elapsed_time seconds"
         """
 
 rule format_tsv_file:
@@ -75,12 +90,18 @@ rule format_tsv_file:
         formatted_output
     singularity:
         "docker://rocker/tidyverse:latest"
+    threads:
+        8
     shell:
         """
+        start_time=$(date +%s)
         Rscript -e "
         deconv_matrix <- read.table('{input.tsv_file}', sep='\t', header=TRUE, row.names=1);
         colnames(deconv_matrix) <- stringr::str_replace_all(colnames(deconv_matrix), '[/. ]', '');
         deconv_matrix <- deconv_matrix[,sort(colnames(deconv_matrix), method='shell')];
         write.table(deconv_matrix, file='{output}', sep='\t', quote=FALSE, row.names=FALSE);
         "
+        end_time=$(date +%s)
+        elapsed_time=$((end_time - start_time))
+        echo "format_tsv_file took $elapsed_time seconds "
         """

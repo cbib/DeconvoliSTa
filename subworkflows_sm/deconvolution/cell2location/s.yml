@@ -1,6 +1,0 @@
-channels:
- - conda-forge
- - bioconda
- - default
-dependencies:
-  - cudatoolkit=11.1

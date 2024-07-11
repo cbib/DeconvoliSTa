@@ -13,19 +13,24 @@ process buildCell2locationModel {
 
     script:
         tag_suffix = file(sc_input).getSimpleName()
-        // sample_id_arg = ( params.sampleID ==~ /none/ ? "" : "-s $params.sampleID" )
-        // epochs = ( params.epoch_build ==~ /default/ ? "" : "-e $params.epoch_build")
-        // sample_id_arg = ( "-s none" )
-        epochs = ( "-e 3")
+        sample_id_arg = ( params.sampleID ==~ /none/ ? "" : "-s $params.sampleID" )
+        epochs = ( params.epoch_build ==~ /default/ ? "" : "-e $params.epoch_build")
         args = ( params.deconv_args.cell2location.build ? params.deconv_args.cell2location.build : "" )
         cuda_device = ( params.gpu ? params.cuda_device : "cpu" )
         println ("Building cell2location model with ${ (params.gpu) ? "GPU" : "CPU" }...")
-        """
+        c = """
+        start_time=\$(date +%s)
         source activate cell2loc_env
         python $params.rootdir/subworkflows/deconvolution/cell2location/build_model.py \
-            $sc_input $cuda_device -a $params.annot $epochs $args -o \$PWD 
+            $sc_input $cuda_device -a $params.annot $epochs $args -o \$PWD
+        end_time=\$(date +%s)
+        elapsed_time=\$((end_time - start_time))
+        echo "buildCell2locationModel took \$elapsed_time seconds" | tee time.log
         """
-
+        log.info("Command executed: \n $c")
+        """
+        $c
+        """
 }
 
 process fitCell2locationModel {
@@ -44,16 +49,24 @@ process fitCell2locationModel {
     script:
         output_suffix = file(sp_input).getSimpleName()
         output = "proportions_cell2location_${output_suffix}${params.runID_props}.preformat"
-        // epochs = ( params.epoch_fit ==~ /default/ ? "" : "-e $params.epoch_fit")
-        epochs = ( "-e 3")
+        epochs = ( params.epoch_fit ==~ /default/ ? "" : "-e $params.epoch_fit")
+        // epochs = ( "-e 3")
         args = ( params.deconv_args.cell2location.fit ? params.deconv_args.cell2location.fit : "" )
         cuda_device = ( params.gpu ? params.cuda_device : "cpu" )
         println ("Fitting cell2location model from file ${model} with ${ (params.gpu) ? "GPU" : "CPU" }...")
         println ("Arguments: ${args}")
-        """
+        c = """
+        start_time=\$(date +%s)
         source activate cell2loc_env
         python $params.rootdir/subworkflows/deconvolution/cell2location/fit_model.py \
-            $sp_input $model $cuda_device $epochs $args -o \$PWD 
+            $sp_input $model $cuda_device $epochs $args -o \$PWD
         mv proportions.tsv $output
+        end_time=\$(date +%s)
+        elapsed_time=\$((end_time - start_time))
+        echo "fitCell2locationModel took \$elapsed_time seconds" | tee time.log
+        """
+        log.info("Command executed: \n $c")
+        """
+        $c
         """
 }
