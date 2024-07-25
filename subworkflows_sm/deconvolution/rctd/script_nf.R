@@ -68,5 +68,5 @@ if (nrow(deconv_matrix) != ncol(spatial_data$counts)){
           paste0("'", colnames(spatial_data$counts)[!colnames(spatial_data$counts) %in% rownames(deconv_matrix)], "'", collapse=", "))
 }
 
-write.table(deconv_matrix, file=par$output, sep="\t", quote=FALSE, row.names=FALSE)
+write.table(deconv_matrix, file=par$output, sep="\t", quote=FALSE, row.names=TRUE)
 # write.table(matrix("hello world, this is rctd"), file=par$output, sep="\t", quote=FALSE, row.names=FALSE)
