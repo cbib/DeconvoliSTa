@@ -1,3 +1,4 @@
+# Snakefile
 import os
 import sys
 import yaml
@@ -10,7 +11,7 @@ def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
 # Charger les paramètres de configuration nécessaires
-sc_input = config["sc_input"]
+
 mode = config["mode"]
 synthspot_types_map = {
     'aud': "artificial_uniform_distinct", 
@@ -31,6 +32,7 @@ synthspot_types_map = {
 
 skip_metrics = config["skip_metrics"] if 'skip_metrics' in config.keys() else "false"
 if mode  == "run_dataset":
+    sc_input = config["sc_input"]
     sp_input = config["sp_input"]
     methods =  config["methods"].split(',')   
 
@@ -52,6 +54,7 @@ if mode  == "run_dataset":
             input:
                 output_files
 elif mode == "generate_data":
+    sc_input = config["sc_input"]
     generated_files = config["sc_input"]
     dataset_types = [synthspot_types_map[t] for t in config['dataset_type'].split(',')]
     reps = config["reps"]
@@ -62,5 +65,31 @@ elif mode == "generate_data":
     rule gen_files:
         input:
             generated_files
+elif mode == "generate_vis":
+    sp_input = config["sp_input"]
+    output_dir = config.get("output", ".")
+    generated_file = f"{output_dir}/{os.path.basename(sp_input).split('.')[0]}.html" 
+    norm_weights_filepath = config.get("norm_weights_filepath")
+    st_coords_filepath = config.get("st_coords_filepath")
+    data_clustered = config.get("data_clustered")
+    image_path = config.get("image_path")
+    n_largest_cell_types = config.get("n_largest_cell_types", "5")
+    scale_factor = config.get("scale_factor")
+    rule gen_html:
+        input:
+            norm_weights_filepath =norm_weights_filepath,
+            st_coords_filepath = st_coords_filepath,
+            data_clustered = data_clustered,
+            image_path = image_path
+        output:
+            generated_file = generated_file
+        shell:
+            """
+            start_time=$(date +%s)
+            python3 subworkflows_sm/visualization/sp_visualizer.py {input[0]} {input[1]} {input[2]} {input[3]} {n_largest_cell_types} {scale_factor} {generated_file}
+            end_time=$(date +%s)
+            elapsed_time=$((end_time - start_time))
+            echo "html_generation took $elapsed_time seconds"
+            """
 else:
     print("Enter a valid execution mode --mode\n")
