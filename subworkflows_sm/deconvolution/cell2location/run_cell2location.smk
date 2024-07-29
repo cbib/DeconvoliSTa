@@ -19,7 +19,7 @@ method = "cell2location"
 formatted_output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
 use_gpu = config["use_gpu"]
 annot = config["annot"] if "annot" in config.keys() else params["annot"]
-
+map_genes = config.get("map_genes", "false")
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
 convert_script = "subworkflows_sm/deconvolution/convertBetweenRDSandH5AD.R"
@@ -39,8 +39,8 @@ rule convertBetweenRDSandH5AD:
     shell:
         """
         start_time=$(date +%s)
-        Rscript {convert_script} --input_path {input.sc_rds_file}
-        Rscript {convert_script} --input_path {input.sp_rds_file}
+        Rscript {convert_script} --input_path {input.sc_rds_file} --annot {annot}
+        Rscript {convert_script} --input_path {input.sp_rds_file} --annot {annot}
         end_time=$(date +%s)
         elapsed_time=$((end_time - start_time))
         echo "convertBetweenRDSandH5AD took $elapsed_time seconds"
@@ -77,11 +77,18 @@ rule fit_cell2location:
     shell:
         """
         start_time=$(date +%s)
-        python3 subworkflows_sm/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu}
+        python3 subworkflows_sm/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu} {map_genes}
         end_time=$(date +%s)
         elapsed_time=$((end_time - start_time))
         echo "fit_cell2location took $elapsed_time seconds"
         """
+        # """
+        # start_time=$(date +%s)
+        # python3 subworkflows_sm/deconvolution/cell2location/load_model.py {input[0]} {input[1]} 0 -o {output_dir} 
+        # end_time=$(date +%s)
+        # elapsed_time=$((end_time - start_time))
+        # echo "fit_cell2location took $elapsed_time seconds"
+        # """
 
 rule format_tsv_file:
     input:
@@ -99,7 +106,7 @@ rule format_tsv_file:
         deconv_matrix <- read.table('{input.tsv_file}', sep='\t', header=TRUE, row.names=1);
         colnames(deconv_matrix) <- stringr::str_replace_all(colnames(deconv_matrix), '[/. ]', '');
         deconv_matrix <- deconv_matrix[,sort(colnames(deconv_matrix), method='shell')];
-        write.table(deconv_matrix, file='{output}', sep='\t', quote=FALSE, row.names=FALSE);
+        write.table(deconv_matrix, file='{output}', sep='\t', quote=FALSE, row.names=TRUE);
         "
         end_time=$(date +%s)
         elapsed_time=$((end_time - start_time))

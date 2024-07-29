@@ -1,6 +1,27 @@
 #!/usr/bin/env python3
 import argparse as arp
 import os
+from pybiomart import Server
+
+
+def convert_query_geneSymbol_to_ensemblID(adata):
+    import pandas as pd
+    from pybiomart import Server
+
+    server = Server(host='http://www.ensembl.org')
+
+    dataset = (server.marts['ENSEMBL_MART_ENSEMBL']
+                    .datasets['hsapiens_gene_ensembl'])
+
+    gene_map = dataset.query(attributes=['ensembl_gene_id', 'external_gene_name'])
+
+    # Map gene symbols to Ensembl IDs
+    adata.var['SYMBOL'] = adata.var_names
+    adata = adata[:, adata.var['SYMBOL'].isin(gene_map['Gene name'].values)]
+    adata.var['ENSEMBL'] = adata.var['SYMBOL'].map(dict(zip(gene_map['Gene name'], gene_map['Gene stable ID'])))
+    adata.var_names = adata.var['ENSEMBL']
+    adata.var.features = adata.var['ENSEMBL']
+    return adata
 
 def main():
     ##### PARSING COMMAND LINE ARGUMENTS #####
@@ -15,7 +36,7 @@ def main():
     prs.add_argument('-o','--out_dir', default = os.getcwd() ,
                      type = str, help = 'model and proportions output directory')
     # 30000 1000 8 200
-    prs.add_argument('-e', '--epochs', default=30, type = int, help = "number of epochs to fit the model")
+    prs.add_argument('-e', '--epochs', default=30000, type = int, help = "number of epochs to fit the model")
 
     prs.add_argument('-p', '--posterior_sampling', default=1000, type = int, help = "number of samples to take from the posterior distribution")
 
@@ -23,10 +44,11 @@ def main():
 
     prs.add_argument('-d', '--detection_alpha', default=200, type = int, help = "within-experiment variation in RNA detection sensitivity")
     
+    prs.add_argument('-m', '--map_genes', default="false", type = str, help = "map genes between single cell and spatial")
+
     args = prs.parse_args()
     
     cuda_device = args.cuda_device
-    # cuda_device = "cpu"
     print("cuda device = ", cuda_device)
 
     sp_data_path = args.sp_data_path
@@ -65,17 +87,21 @@ def main():
     print("Reading in spatial data from " + sp_data_path + "...")
     adata = sc.read_h5ad(sp_data_path)
     adata.var['SYMBOL'] = adata.var_names
-
     # mitochondria-encoded (MT) genes should be removed for spatial mapping
     adata.var['mt'] = [gene.startswith('mt-') for gene in adata.var['SYMBOL']]
     adata = adata[:, ~adata.var['mt'].values]
-
+    
+    # adata_vis = adata.copy()
     adata_vis = adata.copy()
     adata_vis.raw = adata_vis
+    if args.map_genes == "true":
+        adata_vis = convert_query_geneSymbol_to_ensemblID(adata_vis)
 
     print("Reading in the model...")
     adata_scrna_raw = sc.read(args.model_path)
-    
+
+
+
     # Export estimated expression in each cluster
     if 'means_per_cluster_mu_fg' in adata_scrna_raw.varm.keys():
         inf_aver = adata_scrna_raw.varm['means_per_cluster_mu_fg'][[f'means_per_cluster_mu_fg_{i}' 
@@ -119,20 +145,13 @@ def main():
     )
 
     # Save model and anndata object with results
-    mod.save(output_folder , overwrite=True)
-    adata_vis.write(os.path.join(output_folder, 'sp.h5ad'))
-
+    # mod.save(output_folder , overwrite=True)
+    # adata_vis.write(os.path.join(output_folder, 'sp.h5ad'))
     # Export proportion file, but first rename columns and divide by rowSums
     props = adata_vis.obsm['q05_cell_abundance_w_sf']
     props = props.rename(columns={x:x.replace("q05cell_abundance_w_sf_", "") for x in props.columns})
     props = props.div(props.sum(axis=1), axis='index')
-    props.to_csv(os.path.join(output_folder, 'proportions.tsv'), sep="\t")
 
-    # df = pd.DataFrame(data=np.random.normal(size=(10,10)),
-    #                     index=["row"+str(i) for i in range(10)],
-    #                     columns=["col"+str(i) for i in range(10)])
-    # df.to_csv(os.path.join(output_folder, 'proportions.tsv'), sep="\t")
-
-        
+    props.to_csv(os.path.join(output_folder, 'proportions.tsv'), sep="\t", index = True)
 if __name__ == '__main__':
     main()

@@ -49,7 +49,7 @@ def create_file_if_not_exists(file_path):
         with open(file_path, 'w') as f:
             pass  # Ne rien écrire, juste créer le fichier vide
 
-def generate_synthetic_data(sc_input, dataset_type, rep, rootdir, outdir, annot, args=None ):
+def generate_synthetic_data(sc_input, dataset_type, rep, outdir, annot, args=None ):
     output_file = f"{os.path.basename(sc_input).split('.')[0]}_{dataset_type}_rep{rep}.rds"
     create_file_if_not_exists(output_file)
     args_str = args if args else ''
@@ -89,8 +89,7 @@ if __name__ == "__main__":
     sc_input = config["sc_input"]
     dataset_type = config["dataset_type"]
     reps = config["reps"]
-    rootdir = config["rootdir"]
-
+    out_dir = config["output"]
 
     sc_input_type = 'h5ad' if sc_input.endswith(('h5', 'h5ad')) else 'rds'
     print(f"The synthetic data is of {sc_input_type} format.")
@@ -114,8 +113,6 @@ if __name__ == "__main__":
     for dataset_type in synthspot_type_input:
         for rep in range(1, int(reps) + 1):
             output_file = f"{os.path.splitext(os.path.basename(sc_input))[0]}_{dataset_type}_rep{rep}.rds"
-            output_path = os.path.join("synthetic_data_sm", output_file)
+            output_path = os.path.join(out_dir, output_file)
             if not os.path.exists(output_path):
-                # Ensure Snakemake knows about the generated files
-                # result = subprocess.run(['touch', '{output_file}'], capture_output=True, text=True)
-                generate_synthetic_data(sc_input_conv, dataset_type, rep, rootdir, "synthetic_data_sm", synthspot_args_input)
+                generate_synthetic_data(sc_input_conv, dataset_type, rep, out_dir, synthspot_args_input)

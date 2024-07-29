@@ -11,7 +11,7 @@ def get_basename(file_path):
 with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
-def fit_cell2location_model(sp_input, model, output_dir, use_gpu):
+def fit_cell2location_model(sp_input, model, output_dir, use_gpu, map_genes):
     """
     Fit cell2location model.
     
@@ -34,8 +34,8 @@ def fit_cell2location_model(sp_input, model, output_dir, use_gpu):
     print(f"Arguments: {args}")
     print(f"{sp_input}")
     # print(f"sp_input.split(',')[0]" {sp_input.split(",")[0]})
-    command = [
-        "bash", "-c", f"source activate cell2loc_env && python subworkflows_sm/deconvolution/cell2location/fit_model.py {sp_input.split(',')[0]} {model} {cuda_device} {epochs} {args} -o {output_dir}  && mv {output_dir}/proportions.tsv {output_dir}/{output}"
+    command = [ #pip install pybiomart 
+        "bash", "-c", f"source activate cell2loc_env && python subworkflows_sm/deconvolution/cell2location/fit_model.py {sp_input.split(',')[0]} {model} {cuda_device} {epochs} {args} -o {output_dir}  -m {map_genes} && mv {output_dir}/proportions.tsv {output_dir}/{output}"
     ]
     print(command)
     subprocess.run(command, check=True)
@@ -54,5 +54,6 @@ if __name__ == "__main__":
     model = args[2]
     output_dir = args[3]
     use_gpu = args[4]
-    fit_cell2location_model(sp_input, model, output_dir, use_gpu)
+    map_genes = args[5]
+    fit_cell2location_model(sp_input, model, output_dir, use_gpu, map_genes)
   

@@ -31,7 +31,7 @@ rule run_rctd:
     output:
         output
     singularity:
-        "docker://csangara/sp_rctd:latest"
+        "docker://abderahim02/sp_rctd:latest" #"docker://csangara/sp_rctd:latest"
     threads:
         12
     shell:

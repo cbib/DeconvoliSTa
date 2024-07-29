@@ -7,26 +7,6 @@ import matplotlib as mpl
 mpl.use('Agg')
 
 
-import sys
-import threading
-
-# Show current recursion limit
-current_recursion_limit = sys.getrecursionlimit()
-print(f"Current recursion limit: {current_recursion_limit}")
-
-# Set a new stack size (e.g., 2MB)
-new_stack_size = 2 * 1024 * 1024  # 2 MB in bytes
-threading.stack_size(new_stack_size)
-
-print(f"New stack size set to: {new_stack_size} bytes")
-
-# Verify the new stack size (applies to new threads only)
-new_thread = threading.Thread(target=lambda: None)
-new_thread.start()
-new_thread.join()
-
-print("New thread created with the new stack size.")
-
 def main():
     ##### PARSING COMMAND LINE ARGUMENTS #####
     prs = arp.ArgumentParser()
@@ -48,7 +28,7 @@ def main():
     prs.add_argument('-t', '--tech_column', default = None, nargs='+',
                  type = str, help = "multiplicative technical effects, such as platform effects")
     # 250 1000
-    prs.add_argument('-e', '--epochs', default=25, type = int, help = "number of epochs to train the model")
+    prs.add_argument('-e', '--epochs', default=250, type = int, help = "number of epochs to train the model")
 
     prs.add_argument('-p', '--posterior_sampling', default=1000, type = int, help = "number of samples to take from the posterior distribution")
 
@@ -98,26 +78,23 @@ def main():
     print("Reading scRNA-seq data from " + args.sc_data_path + "...")
     adata_scrna_raw = anndata.read_h5ad(args.sc_data_path)
     adata_scrna_raw.var['SYMBOL'] = adata_scrna_raw.var_names
-
-    # Filter genes
+    # # Filter genes
     print("Before filtering: {} cells and {} genes.".format(*adata_scrna_raw.shape))
     from cell2location.utils.filtering import filter_genes
     selected = filter_genes(adata_scrna_raw, cell_count_cutoff=5, cell_percentage_cutoff2=0.03, nonz_mean_cutoff=1.12)
     print("After selecting genes.")
-    # adata_scrna_raw = adata_scrna_raw[:, selected]# l erreur
+    adata_scrna_raw = adata_scrna_raw[:, selected].copy() 
 
-    adata_scrna_raw = adata_scrna_raw[:, selected] # l erreur
     print("After filtering: {} cells and {} genes.".format(*adata_scrna_raw.shape))
-
     print("Preparing anndata for the regression model...")
     scvi.data.setup_anndata(adata=adata_scrna_raw, 
-                        # 10X reaction / sample / batch
+                        # # 10X reaction / sample / batch
                         batch_key=args.sample_column, 
-                        # cell type, covariate used for constructing signatures
+                        # # cell type, covariate used for constructing signatures
                         labels_key=args.annotation_column, 
-                        # multiplicative technical effects (platform, 3' vs 5', donor effect)
+                        # # multiplicative technical effects (platform, 3' vs 5', donor effect)
                         categorical_covariate_keys=args.tech_column, 
-                        copy=True)
+                        )
     
     # Run the model - use all data for training (validation not implemented yet, train_size=1)
     from cell2location.models import RegressionModel
@@ -140,10 +117,5 @@ def main():
         os.remove(output_folder + '/sc.h5ad')
         adata_scrna_raw.__dict__['_raw'].__dict__['_var'] = adata_scrna_raw.__dict__['_raw'].__dict__['_var'].rename(columns={'_index': 'features'})
         adata_scrna_raw.write(output_folder + '/sc.h5ad')
-
-    # with open(output_folder + '/sc.h5ad', "w") as f:
-    #    print("hello world", file=f)
-
-
 if __name__ == '__main__':
     main()
