@@ -5,6 +5,9 @@ import sys
 import os
 import matplotlib as mpl
 mpl.use('Agg')
+# Fonction pour obtenir le nom de base du fichier sans extension
+def get_basename(file_path):
+    return os.path.splitext(os.path.basename(file_path))[0]
 
 
 def main():
@@ -13,6 +16,9 @@ def main():
     
     prs.add_argument('sc_data_path',
                      type = str, help = 'path to single cell h5ad count data')
+    
+    prs.add_argument('sp_data_path',
+                     type = str, help = 'path to spatial data')
     
     prs.add_argument('cuda_device', type = str, help = "index of cuda device ID or cpu")
 
@@ -28,7 +34,7 @@ def main():
     prs.add_argument('-t', '--tech_column', default = None, nargs='+',
                  type = str, help = "multiplicative technical effects, such as platform effects")
     # 250 1000
-    prs.add_argument('-e', '--epochs', default=250, type = int, help = "number of epochs to train the model")
+    prs.add_argument('-e', '--epochs', default=25, type = int, help = "number of epochs to train the model")
 
     prs.add_argument('-p', '--posterior_sampling', default=1000, type = int, help = "number of samples to take from the posterior distribution")
 
@@ -111,11 +117,14 @@ def main():
     mod.save(output_folder, overwrite=True)
 
     try:
-        adata_scrna_raw.write(output_folder + '/sc.h5ad')
+        adata_scrna_raw.write(output_folder + f"/sc_{get_basename(args.sc_data_path)}_{get_basename(args.sp_data_path)}.h5ad")
     except ValueError:
         print("There seems to be an issue with the conversion. Renaming columns...")
-        os.remove(output_folder + '/sc.h5ad')
+        os.remove(output_folder + f"/sc_{get_basename(args.sc_data_path)}_{get_basename(args.sp_data_path)}.h5ad")
         adata_scrna_raw.__dict__['_raw'].__dict__['_var'] = adata_scrna_raw.__dict__['_raw'].__dict__['_var'].rename(columns={'_index': 'features'})
-        adata_scrna_raw.write(output_folder + '/sc.h5ad')
+        adata_scrna_raw.write(output_folder + f"/sc_{get_basename(args.sc_data_path)}_{get_basename(args.sp_data_path)}.h5ad")
+
+
+    
 if __name__ == '__main__':
     main()

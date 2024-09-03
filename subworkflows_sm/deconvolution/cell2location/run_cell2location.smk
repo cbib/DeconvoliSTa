@@ -3,7 +3,7 @@ import yaml
 import time
 
 # Lire le fichier de configuration YAML
-with open("subworkflows_sm/deconvolution/cell2location/my_config.yaml", "r") as config_file:
+with open("subworkflows_sm/deconvolution/cell2location/config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
 # Fonction pour obtenir le nom de base du fichier sans extension
@@ -48,9 +48,10 @@ rule convertBetweenRDSandH5AD:
 
 rule build_cell2location:
     input:
-        rules.convertBetweenRDSandH5AD.output.sc_h5ad_file
+        rules.convertBetweenRDSandH5AD.output.sc_h5ad_file,
+        rules.convertBetweenRDSandH5AD.output.sp_h5ad_file
     output:
-        temp(f"{output_dir}/sc.h5ad")
+        temp(f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad")
     singularity:
         "docker://csangara/sp_cell2location:latest"
     threads:
@@ -58,7 +59,7 @@ rule build_cell2location:
     shell:
         """
         start_time=$(date +%s)
-        python3 subworkflows_sm/deconvolution/cell2location/run_build.py {input[0]} {output_dir} {use_gpu} {annot}
+        python3 subworkflows_sm/deconvolution/cell2location/run_build.py {input[0]} {input[1]} {output_dir} {use_gpu} {annot}
         end_time=$(date +%s)
         elapsed_time=$((end_time - start_time))
         echo "build_cell2location took $elapsed_time seconds"
@@ -67,7 +68,8 @@ rule build_cell2location:
 rule fit_cell2location:
     input:
         rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
-        model=f"{output_dir}/sc.h5ad"
+        model= rules.build_cell2location.output
+
     output:
         temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
     singularity:
@@ -82,13 +84,6 @@ rule fit_cell2location:
         elapsed_time=$((end_time - start_time))
         echo "fit_cell2location took $elapsed_time seconds"
         """
-        # """
-        # start_time=$(date +%s)
-        # python3 subworkflows_sm/deconvolution/cell2location/load_model.py {input[0]} {input[1]} 0 -o {output_dir} 
-        # end_time=$(date +%s)
-        # elapsed_time=$((end_time - start_time))
-        # echo "fit_cell2location took $elapsed_time seconds"
-        # """
 
 rule format_tsv_file:
     input:

@@ -13,7 +13,8 @@ par <- list(
     annot = "cell_type",
     sc_input = "datafiles_st_deconvolution/core_GBMap.rds",
     sp_input = "datafiles_st_deconvolution/UKF243_T_ST_1_raw.rds",
-    num_cores = 12
+    num_cores = 12,
+    map_genes = 'False'
 )
 
 
@@ -101,4 +102,3 @@ deconv_matrix <- deconv_matrix[,sort(colnames(deconv_matrix), method="shell")]
 # }
 
 write.table(deconv_matrix, file=par$output, sep="\t", quote=FALSE, row.names=TRUE)
-# write.table(matrix("hello world, this is rctd"), file=par$output, sep="\t", quote=FALSE, row.names=FALSE)
