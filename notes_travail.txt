@@ -215,9 +215,12 @@ time  Rscript  subworkflows_sm/deconvolution/rctd/script_nf.R  --sc_input datafi
 
 
 
-snakemake -F -s   main.smk -c8 --config mode="run_dataset" methods=cell2location sc_input="datafiles_st_deconvolution/core_GBMap_chunk_1.rds" sp_input="datafiles_st_deconvolution/UKF243_T_ST_1_raw.rds" output="res" use_gpu="true" skip_metrics="true" annot="annotation_level_4" --use-singularity --singularity-args '\--nv'
+snakemake -s   main.smk -c8 --config mode="run_dataset" methods=cell2location sc_input="datafiles_st_deconvolution/core_GBMap_chunk_1.rds" sp_input="datafiles_st_deconvolution/UKF243_T_ST_1_raw.rds" output="res" use_gpu="true" skip_metrics="true" annot="annotation_level_4" --use-singularity --singularity-args '\--nv'
 
 
 
 
 snakemake -s  main.smk -c8 --config mode="generate_vis" sp_input="UKF243_T_ST_1_raw.rds" output="vis_output" norm_weights_filepath="res_rctd_cluster/proportions_rctd_sample243" st_coords_filepath="tissue_positions_list_243.csv" data_clustered="seurat_metadata_UKF243_T_ST.csv" image_path="original_tissue_images/tissue_hires_image_243.png" scale_factor='0.24414062'
+
+
+snakemake -s  main.smk -c8 --config mode="generate_vis" sp_input="UKF243_T_ST_1_raw.rds" output="vis_output" norm_weights_filepaths="res_rctd_cluster/proportions_rctd_sample243,res/proportions_cell2location_UKF243_T_ST_1_raw_001_chunk_1.tsv" st_coords_filepath="tissue_positions_list_243.csv" data_clustered="seurat_metadata_UKF243_T_ST.csv" image_path="original_tissue_images/tissue_hires_image_243.png" scale_factor='0.24414062' deconv_methods=rctd,cell2location

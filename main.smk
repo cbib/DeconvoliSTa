@@ -69,15 +69,16 @@ elif mode == "generate_vis":
     sp_input = config["sp_input"]
     output_dir = config.get("output", ".")
     generated_file = f"{output_dir}/{os.path.basename(sp_input).split('.')[0]}.html" 
-    norm_weights_filepath = config.get("norm_weights_filepath")
+    norm_weights_filepaths = config.get("norm_weights_filepaths").split(",")
     st_coords_filepath = config.get("st_coords_filepath")
     data_clustered = config.get("data_clustered")
     image_path = config.get("image_path")
     n_largest_cell_types = config.get("n_largest_cell_types", "5")
     scale_factor = config.get("scale_factor")
+    deconv_methods = config.get("deconv_methods").split(",")
     rule gen_html:
         input:
-            norm_weights_filepath =norm_weights_filepath,
+            norm_weights_filepath =norm_weights_filepaths,
             st_coords_filepath = st_coords_filepath,
             data_clustered = data_clustered,
             image_path = image_path
@@ -86,7 +87,7 @@ elif mode == "generate_vis":
         shell:
             """
             start_time=$(date +%s)
-            python3 subworkflows_sm/visualization/sp_visualizer.py {input[0]} {input[1]} {input[2]} {input[3]} {n_largest_cell_types} {scale_factor} {generated_file}
+            python3 subworkflows_sm/visualization/sp_visualizer.py {input[0]} {input[1]} {input[2]} {input[3]} {n_largest_cell_types} {scale_factor} {generated_file} {deconv_methods}
             end_time=$(date +%s)
             elapsed_time=$((end_time - start_time))
             echo "html_generation took $elapsed_time seconds"
