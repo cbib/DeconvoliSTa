@@ -27,14 +27,14 @@ rule generateSyntheticData:
     input:
         sc_input=config['sc_input']
     output:
-        expand("synthetic_data_sm/{basename}_{dataset_type}_rep{rep}.rds", 
+        expand("{out_dir}/{basename}_{dataset_type}_rep{rep}.rds", 
+                config['output'],
                basename= os.path.splitext(os.path.basename(config['sc_input']))[0],
                dataset_type = [synthspot_types_map[t] for t in config['dataset_type'].split(',')],
                rep=range(1, int(config['reps']) + 1))
     singularity: 
         "docker://csangara/synthspot:latest"
     params:
-        rootdir=config['rootdir'],
         reps=config['reps'],
         args= ' '.join([f"--{k} {v}" for k, v in config.items() if k not in ["dataset_type", "reps", "sc_input"]])
     shell:

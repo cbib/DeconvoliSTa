@@ -1,0 +1,15 @@
+# my_config.yaml
+
+cuda_device: 0
+
+sampleID: "none"
+epoch_build: "default"
+epoch_fit: "default"
+annot: "subclass"
+deconv_args:
+  cell2location:
+    build: ""
+    fit: ""
+
+runID_props: "_001"
+output: "res"

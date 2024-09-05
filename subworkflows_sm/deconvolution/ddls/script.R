@@ -6,12 +6,6 @@ library(Seurat)
 library(reticulate)
 
 
-
-
-# list(
-#     epochs = 100,
-#     batch_size = 10
-# )
 par <- R.utils::commandArgs(trailingOnly=TRUE, asValues=TRUE)
 cat("Given arguments are \n")
 print(par)

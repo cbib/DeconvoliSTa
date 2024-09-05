@@ -21,18 +21,18 @@ def get_basename(file_path):
 output_suffix = get_basename(sp_input)
 print("methods evaluate = ", methods)
 # Générer les fichiers de métriques pour chaque méthode
-metrics_files = [f"{output_dir}/metrics/metrics_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
-output_files= [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
+metrics_files = [f"{output_dir}/metrics/metrics_{method}_{get_basename(sc_input)}_{get_basename(sp_input)}_{output_suffix}{runID_props}.tsv" for method in methods]
+output_files= [f"{output_dir}/proportions_{method}_{get_basename(sc_input)}_{get_basename(sp_input)}_{output_suffix}{runID_props}.tsv" for method in methods]
 
 
 # Générer dynamiquement les règles pour chaque méthode
 for method in methods:
     rule:
         input:
-            props_file=f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv",
+            props_file=f"{output_dir}/proportions_{method}_{get_basename(sc_input)}_{get_basename(sp_input)}_{output_suffix}{runID_props}.tsv",
             sp_input=sp_input
         output:
-            metrics_file=f"{output_dir}/metrics/metrics_{method}_{output_suffix}{runID_props}.tsv"
+            metrics_file=f"{output_dir}/metrics/metrics_{method}_{get_basename(sc_input)}_{get_basename(sp_input)}_{output_suffix}{runID_props}.tsv"
         singularity:
             "docker://csangara/sp_eval:latest"
         shell:
