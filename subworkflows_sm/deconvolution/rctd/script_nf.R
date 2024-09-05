@@ -14,7 +14,7 @@ par <- list(
     sc_input = "datafiles_st_deconvolution/core_GBMap.rds",
     sp_input = "datafiles_st_deconvolution/UKF243_T_ST_1_raw.rds",
     num_cores = 12,
-    map_genes = 'False'
+    map_genes = 'false'
 )
 
 
@@ -76,8 +76,10 @@ if (class(spatial_data) != "Seurat"){
                                     counts = GetAssayData(spatial_data, slot="counts"),
                                     use_fake_coords = use_fake_coords)
 }
+if (par$map_genes == 'true'){
+    spatialRNA_obj_visium = convert_query_geneSymbol_to_ensemblID(spatialRNA_obj_visium)
+}
 
-spatialRNA_obj_visium = convert_query_geneSymbol_to_ensemblID(spatialRNA_obj_visium)
 cat("Running RCTD with", par$num_cores, "cores...\n")
 start_time <- Sys.time()
 RCTD_deconv <- create.RCTD(spatialRNA_obj_visium, reference_obj, max_cores = as.numeric(par$num_cores),
@@ -93,12 +95,5 @@ deconv_matrix <- as.matrix(sweep(RCTD_deconv@results$weights, 1, rowSums(RCTD_de
 colnames(deconv_matrix) <- stringr::str_replace_all(colnames(deconv_matrix), "[/ .&-]", "")
 deconv_matrix <- deconv_matrix[,sort(colnames(deconv_matrix), method="shell")]
 
-
-# # à corriger en mettant spatial_data@assays@counts dans spatial_data$counts 
-# if (nrow(deconv_matrix) != ncol(spatial_data$counts)){
-#     cat ("okkkkkk\n")
-#   message("The following rows were removed, possibly due to low number of genes: ",
-#           paste0("'", colnames(spatial_data$counts)[!colnames(spatial_data$counts) %in% rownames(deconv_matrix)], "'", collapse=", "))
-# }
 
 write.table(deconv_matrix, file=par$output, sep="\t", quote=FALSE, row.names=TRUE)

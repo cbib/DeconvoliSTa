@@ -23,6 +23,7 @@ deconv_args = params['deconv_args']
 script_dir = os.path.dirname(os.path.abspath(__file__))
 rctd_script = "subworkflows_sm/deconvolution/rctd/script_nf.R"
 annot = config["annot"] if "annot" in config.keys() else params['annot']
+map_genes = config.get("map_genes", "false")
 
 rule run_rctd:
     input:
@@ -38,6 +39,6 @@ rule run_rctd:
         """
         Rscript {rctd_script} \
             --sc_input {input.sc_input} --sp_input {input.sp_input} \
-            --annot {annot} --output {output} --num_cores {threads} 
+            --annot {annot} --output {output} --map_genes {map_genes} --num_cores {threads} 
         """
 

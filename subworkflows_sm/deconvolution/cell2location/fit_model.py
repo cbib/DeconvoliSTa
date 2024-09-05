@@ -36,7 +36,7 @@ def main():
     prs.add_argument('-o','--out_dir', default = os.getcwd() ,
                      type = str, help = 'model and proportions output directory')
     # 30000 1000 8 200
-    prs.add_argument('-e', '--epochs', default=30, type = int, help = "number of epochs to fit the model")
+    prs.add_argument('-e', '--epochs', default=30000, type = int, help = "number of epochs to fit the model")
 
     prs.add_argument('-p', '--posterior_sampling', default=1000, type = int, help = "number of samples to take from the posterior distribution")
 
@@ -155,3 +155,5 @@ def main():
     props.to_csv(os.path.join(output_folder, 'proportions.tsv'), sep="\t", index = True)
 if __name__ == '__main__':
     main()
+    
+    

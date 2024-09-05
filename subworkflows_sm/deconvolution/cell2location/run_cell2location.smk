@@ -51,6 +51,7 @@ rule build_cell2location:
         rules.convertBetweenRDSandH5AD.output.sc_h5ad_file,
         rules.convertBetweenRDSandH5AD.output.sp_h5ad_file
     output:
+        # temp(f"{output_dir}/sc.h5ad")
         temp(f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad")
     singularity:
         "docker://csangara/sp_cell2location:latest"
@@ -68,6 +69,7 @@ rule build_cell2location:
 rule fit_cell2location:
     input:
         rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
+        # model=f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad"
         model= rules.build_cell2location.output
 
     output:

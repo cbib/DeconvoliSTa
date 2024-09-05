@@ -4,7 +4,7 @@ import sys
 import yaml
 
 # Lire le fichier de configuration YAML
-with open("my_config.yaml", "r") as config_file:
+with open("config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 # Fonction pour obtenir le nom de base du fichier sans extension
 def get_basename(file_path):

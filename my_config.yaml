@@ -1,6 +1,0 @@
-runID_props: "_001"
-deconv_args:
-  cell2location:
-    build: ""
-    fit: ""
-annot: "subclass"
