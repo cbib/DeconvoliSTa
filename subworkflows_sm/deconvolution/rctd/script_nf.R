@@ -3,10 +3,41 @@ Sys.setenv(RETICULATE_MINICONDA_ENABLED = "FALSE")
 library(RCTD)
 library(Matrix)
 library(Seurat)
+library(org.Hs.eg.db)
 
 par <- list(
     cell_min = 5
 )
+par <- list(
+    cell_min = 5,
+    annot = "cell_type",
+    sc_input = "datafiles_st_deconvolution/core_GBMap.rds",
+    sp_input = "datafiles_st_deconvolution/UKF243_T_ST_1_raw.rds",
+    num_cores = 12,
+    map_genes = 'false'
+)
+
+
+convert_query_geneSymbol_to_ensemblID <- function(spatial_query){
+  
+  ## Function to convert gene symbols in query to ensemble IDs [e.g. GBMap is in ENSEMBL while Visium is in Symbol]
+  ## The following code chunk is to be applied only if the reference single cell dataset
+  ## contains ENSEMBL identifiers instead of gene symbols (as in Visium data)
+  
+  master_gene_table <- mapIds(org.Hs.eg.db, keys = rownames(spatial_query@counts), keytype = "SYMBOL", column="ENSEMBL")
+  #master_gene_table <- as.data.frame(master_gene_table)
+    cat ("oaak\n")
+  # get the Ensembl ids with gene symbols i.e. remove those with NA's for gene symbols
+  inds <- which(!is.na(master_gene_table))
+  found_genes <- master_gene_table[inds]
+  
+  # subset your data frame based on the found_genes
+  df2 <- spatial_query@counts[names(found_genes), ]
+  rownames(df2) <- found_genes
+  spatial_query@counts <- df2
+  
+  return(spatial_query)
+}
 
 # Replace default values by user input
 args <- R.utils::commandArgs(trailingOnly=TRUE, asValues=TRUE)
@@ -45,7 +76,9 @@ if (class(spatial_data) != "Seurat"){
                                     counts = GetAssayData(spatial_data, slot="counts"),
                                     use_fake_coords = use_fake_coords)
 }
-
+if (par$map_genes == 'true'){
+    spatialRNA_obj_visium = convert_query_geneSymbol_to_ensemblID(spatialRNA_obj_visium)
+}
 
 cat("Running RCTD with", par$num_cores, "cores...\n")
 start_time <- Sys.time()
@@ -62,11 +95,5 @@ deconv_matrix <- as.matrix(sweep(RCTD_deconv@results$weights, 1, rowSums(RCTD_de
 colnames(deconv_matrix) <- stringr::str_replace_all(colnames(deconv_matrix), "[/ .&-]", "")
 deconv_matrix <- deconv_matrix[,sort(colnames(deconv_matrix), method="shell")]
 
-if (nrow(deconv_matrix) != ncol(spatial_data$counts)){
-    cat ("okkkkkk\n")
-  message("The following rows were removed, possibly due to low number of genes: ",
-          paste0("'", colnames(spatial_data$counts)[!colnames(spatial_data$counts) %in% rownames(deconv_matrix)], "'", collapse=", "))
-}
 
 write.table(deconv_matrix, file=par$output, sep="\t", quote=FALSE, row.names=TRUE)
-# write.table(matrix("hello world, this is rctd"), file=par$output, sep="\t", quote=FALSE, row.names=FALSE)

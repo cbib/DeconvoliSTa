@@ -4,8 +4,31 @@ library(Seurat)
 library(nnls)
 library(magrittr)
 
+# library(org.Hs.eg.db)
+# convert_query_geneSymbol_to_ensemblID <- function(spatial_query){
+  
+#   ## Function to convert gene symbols in query to ensemble IDs [e.g. GBMap is in ENSEMBL while Visium is in Symbol]
+#   ## The following code chunk is to be applied only if the reference single cell dataset
+#   ## contains ENSEMBL identifiers instead of gene symbols (as in Visium data)
+  
+#   master_gene_table <- mapIds(org.Hs.eg.db, keys = spatial_query@Dimnames[[1]], keytype = "SYMBOL", column="ENSEMBL")
+#   #master_gene_table <- as.data.frame(master_gene_table)
+#     cat ("oaak\n")
+#   # get the Ensembl ids with gene symbols i.e. remove those with NA's for gene symbols
+#   inds <- which(!is.na(master_gene_table))
+#   found_genes <- master_gene_table[inds]
+  
+#   # subset your data frame based on the found_genes
+#   # df2 <- spatial_query@counts[names(found_genes), ]
+#   spatial_query@Dimnames[[1]] <- found_genes
+  
+#   return(spatial_query)
+# }
+
+
 # Accept command line arguments
-par <- commandArgs(trailingOnly=TRUE, asValues=TRUE)
+par <- R.utils::commandArgs(trailingOnly=TRUE, asValues=TRUE)
+
 print(par)
 
 ## START ##
@@ -26,6 +49,8 @@ if (class(spatial_data) != "Seurat"){
   DefaultAssay(spatial_data) <- names(spatial_data@assays)[grep("RNA|Spatial",names(spatial_data@assays))[1]]
   spatial_data <- GetAssayData(spatial_data, slot="counts")
 }
+
+# spatial_data = convert_query_geneSymbol_to_ensemblID(spatial_data)
 
 # RUNNING THE METHOD #
 cat("Calculating basis matrix based on mean average expression per cell type...\n")
@@ -51,4 +76,4 @@ cat("Printing results...\n")
 colnames(deconv_matrix) <- stringr::str_replace_all(colnames(deconv_matrix), "[/ .&-]", "")
 deconv_matrix <- deconv_matrix[,sort(colnames(deconv_matrix), method="shell")]
 
-write.table(deconv_matrix, file=par$output, sep="\t", quote=FALSE, row.names=FALSE)
+write.table(deconv_matrix, file=par$output, sep="\t", quote=FALSE, row.names=TRUE)
