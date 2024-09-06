@@ -23,69 +23,110 @@ map_genes = config.get("map_genes", "false")
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
 convert_script = "subworkflows_sm/deconvolution/convertBetweenRDSandH5AD.R"
+load_model = config.get("load_model") == 'true' 
 
 
-rule convertBetweenRDSandH5AD:
-    input:
-        sc_rds_file=sc_input,
-        sp_rds_file=sp_input
-    output:
-        sc_h5ad_file=temp(f"{get_basename(sc_input)}.h5ad"),
-        sp_h5ad_file=temp(f"{get_basename(sp_input)}.h5ad")
-    singularity:
-        "docker://csangara/seuratdisk:latest"
-    threads:
-        8
-    shell:
-        """
-        start_time=$(date +%s)
-        Rscript {convert_script} --input_path {input.sc_rds_file} --annot {annot}
-        Rscript {convert_script} --input_path {input.sp_rds_file} --annot {annot}
-        end_time=$(date +%s)
-        elapsed_time=$((end_time - start_time))
-        echo "convertBetweenRDSandH5AD took $elapsed_time seconds"
-        """
+if not load_model:
+    print("loaaaaaaaaaaaaaaaaaading\n")
+    rule convertBetweenRDSandH5AD:
+        input:
+            sc_rds_file=sc_input,
+            sp_rds_file=sp_input
+        output:
+            sc_h5ad_file=temp(f"{get_basename(sc_input)}.h5ad"),
+            sp_h5ad_file=temp(f"{get_basename(sp_input)}.h5ad")
+        singularity:
+            "docker://csangara/seuratdisk:latest"
+        threads:
+            8
+        shell:
+            """
+            start_time=$(date +%s)
+            Rscript {convert_script} --input_path {input.sc_rds_file} --annot {annot}
+            Rscript {convert_script} --input_path {input.sp_rds_file} --annot {annot}
+            end_time=$(date +%s)
+            elapsed_time=$((end_time - start_time))
+            echo "convertBetweenRDSandH5AD took $elapsed_time seconds"
+            """
+    rule build_cell2location:
+        input:
+            rules.convertBetweenRDSandH5AD.output.sc_h5ad_file,
+            rules.convertBetweenRDSandH5AD.output.sp_h5ad_file
+        output:
+            # temp(f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad")
+            f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad"
+        singularity:
+            "docker://csangara/sp_cell2location:latest"
+        threads:
+            8
+        shell:
+            """
+            start_time=$(date +%s)
+            python3 subworkflows_sm/deconvolution/cell2location/run_build.py {input[0]} {input[1]} {output_dir} {use_gpu} {annot}
+            end_time=$(date +%s)
+            elapsed_time=$((end_time - start_time))
+            echo "build_cell2location took $elapsed_time seconds"
+            """
+    # model_path  = f"{output_dir}/sc.h5ad"
+    rule fit_cell2location:
+        input:
+            rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
+            model= rules.build_cell2location.output
+            # model = model_path
+        output:
+            temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
+        singularity:
+            "docker://csangara/sp_cell2location:latest"
+        threads:
+            8
+        shell:
+            """
+            start_time=$(date +%s)
+            python3 subworkflows_sm/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu} {map_genes}
+            end_time=$(date +%s)
+            elapsed_time=$((end_time - start_time))
+            echo "fit_cell2location took $elapsed_time seconds"
+            """
+else:
+    rule convertBetweenRDSandH5AD:
+        input:
+            sp_rds_file=sp_input
+        output:
+            sp_h5ad_file=temp(f"{get_basename(sp_input)}.h5ad")
+        singularity:
+            "docker://csangara/seuratdisk:latest"
+        threads:
+            8
+        shell:
+            """
+            start_time=$(date +%s)
+            Rscript {convert_script} --input_path {input.sp_rds_file} --annot {annot}
+            end_time=$(date +%s)
+            elapsed_time=$((end_time - start_time))
+            echo "convertBetweenRDSandH5AD took $elapsed_time seconds"
+            """
+    model_path  = config.get("model_path")
+    rule fit_cell2location:
+        input:
+            rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
+            # model= rules.build_cell2location.output
+            model = model_path
+        output:
+            temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
+        singularity:
+            "docker://csangara/sp_cell2location:latest"
+        threads:
+            8
+        shell:
+            """
+            start_time=$(date +%s)
+            python3 subworkflows_sm/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu} {map_genes}
+            end_time=$(date +%s)
+            elapsed_time=$((end_time - start_time))
+            echo "fit_cell2location took $elapsed_time seconds"
+            """
 
-rule build_cell2location:
-    input:
-        rules.convertBetweenRDSandH5AD.output.sc_h5ad_file,
-        rules.convertBetweenRDSandH5AD.output.sp_h5ad_file
-    output:
-        # temp(f"{output_dir}/sc.h5ad")
-        temp(f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad")
-    singularity:
-        "docker://csangara/sp_cell2location:latest"
-    threads:
-        8
-    shell:
-        """
-        start_time=$(date +%s)
-        python3 subworkflows_sm/deconvolution/cell2location/run_build.py {input[0]} {input[1]} {output_dir} {use_gpu} {annot}
-        end_time=$(date +%s)
-        elapsed_time=$((end_time - start_time))
-        echo "build_cell2location took $elapsed_time seconds"
-        """
 
-rule fit_cell2location:
-    input:
-        rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
-        # model=f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad"
-        model= rules.build_cell2location.output
-
-    output:
-        temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
-    singularity:
-        "docker://csangara/sp_cell2location:latest"
-    threads:
-        8
-    shell:
-        """
-        start_time=$(date +%s)
-        python3 subworkflows_sm/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu} {map_genes}
-        end_time=$(date +%s)
-        elapsed_time=$((end_time - start_time))
-        echo "fit_cell2location took $elapsed_time seconds"
-        """
 
 rule format_tsv_file:
     input:
