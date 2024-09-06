@@ -20,8 +20,8 @@ use_gpu = config["use_gpu"]
 
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
-convert_script = "subworkflows_sm/deconvolution/convertBetweenRDSandH5AD.R"
-dirichlet_script = "subworkflows_sm/deconvolution/dirichlet/gen_dirichlet.R"
+convert_script = "subworkflows/deconvolution/convertBetweenRDSandH5AD.R"
+dirichlet_script = "subworkflows/deconvolution/dirichlet/gen_dirichlet.R"
 
 rule run_dirichlet:
     input:

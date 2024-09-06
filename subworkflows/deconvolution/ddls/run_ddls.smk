@@ -20,7 +20,7 @@ method = "ddls"
 output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
 deconv_args = params['deconv_args']
 # Définir le chemin absolu du script R
-ddls_script = "subworkflows_sm/deconvolution/ddls/script.R"
+ddls_script = "subworkflows/deconvolution/ddls/script.R"
 annot = config["annot"] if "annot" in config.keys() else params['annot']
 use_gpu = config["use_gpu"] if "use_gpu" in config.keys() else "false"
 

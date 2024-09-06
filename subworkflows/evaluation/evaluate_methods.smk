@@ -2,7 +2,7 @@ import os
 import yaml
 
 # Charger le fichier de configuration
-with open("subworkflows_sm/evaluation/my_config.yaml", "r") as config_file:
+with open("subworkflows/evaluation/my_config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
 # Préparez les chemins d'entrée/sortie
@@ -37,7 +37,7 @@ for method in methods:
             "docker://csangara/sp_eval:latest"
         shell:
             """
-            Rscript subworkflows_sm/evaluation/metrics.R \
+            Rscript subworkflows/evaluation/metrics.R \
             --props_file {input.props_file} --sp_input {input.sp_input} \
             --output {output.metrics_file}
             """

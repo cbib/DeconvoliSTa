@@ -1,8 +1,6 @@
 process runRCTD {
     tag "rctd_$output_suffix"
     label "retry"
-    echo true
-
     container 'csangara/sp_rctd:latest'
     publishDir { "${params.outdir.props}/${output_suffix.replaceFirst(/_[a-z]{3}[0-9]+/, "")}" },
                 mode: 'copy', pattern: "proportions_*"

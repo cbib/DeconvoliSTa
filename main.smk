@@ -38,12 +38,12 @@ if mode  == "run_dataset":
 
     output_suffix = get_basename(sp_input)
     runID_props = params["runID_props"]
-    include: "subworkflows_sm/deconvolution/run_methods.smk"
+    include: "subworkflows/deconvolution/run_methods.smk"
     output_dir = config["output"]
 
     output_files= [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
     if skip_metrics == "false":
-        include: "subworkflows_sm/evaluation/evaluate_methods.smk"
+        include: "subworkflows/evaluation/evaluate_methods.smk"
         metrics_files = [f"{output_dir}/metrics/metrics_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
         rule main:
             input:
@@ -61,7 +61,7 @@ elif mode == "generate_data":
     rootdir = config["rootdir"]
 
     generated_files = [f"synthetic_data_sm/{os.path.basename(sc_input).split('.')[0]}_{dataset_type}_rep{rep}.rds" for dataset_type in dataset_types for rep in range(1, int(reps) + 1)]
-    include: "subworkflows_sm/data_generation/generate_data.smk"
+    include: "subworkflows/data_generation/generate_data.smk"
     rule gen_files:
         input:
             generated_files
@@ -90,7 +90,7 @@ elif mode == "generate_vis":
         shell:
             """
             start_time=$(date +%s)
-            python3 subworkflows_sm/visualization/sp_visualizer.py {sp_input} {raw_norm_weights_filepaths_without_split} {st_coords_filepath} {data_clustered} {image_path} {n_largest_cell_types} {scale_factor} {generated_file} {deconv_methods}
+            python3 subworkflows/visualization/sp_visualizer.py {sp_input} {raw_norm_weights_filepaths_without_split} {st_coords_filepath} {data_clustered} {image_path} {n_largest_cell_types} {scale_factor} {generated_file} {deconv_methods}
             end_time=$(date +%s)
             elapsed_time=$((end_time - start_time))
             echo "html_generation took $elapsed_time seconds"

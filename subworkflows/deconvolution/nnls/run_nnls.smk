@@ -21,7 +21,7 @@ output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
 deconv_args = params['deconv_args']
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
-nnls_script = "subworkflows_sm/deconvolution/nnls/script_nf.R"
+nnls_script = "subworkflows/deconvolution/nnls/script_nf.R"
 annot = config["annot"] if "annot" in config.keys() else params['annot']
 
 rule run_nnls:

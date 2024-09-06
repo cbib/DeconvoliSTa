@@ -3,7 +3,7 @@ import yaml
 import time
 
 # Lire le fichier de configuration YAML
-with open("subworkflows_sm/deconvolution/cell2location/config.yaml", "r") as config_file:
+with open("subworkflows/deconvolution/cell2location/config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
 # Fonction pour obtenir le nom de base du fichier sans extension
@@ -22,12 +22,11 @@ annot = config["annot"] if "annot" in config.keys() else params["annot"]
 map_genes = config.get("map_genes", "false")
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
-convert_script = "subworkflows_sm/deconvolution/convertBetweenRDSandH5AD.R"
+convert_script = "subworkflows/deconvolution/convertBetweenRDSandH5AD.R"
 load_model = config.get("load_model") == 'true' 
 
 
 if not load_model:
-    print("loaaaaaaaaaaaaaaaaaading\n")
     rule convertBetweenRDSandH5AD:
         input:
             sc_rds_file=sc_input,
@@ -62,7 +61,7 @@ if not load_model:
         shell:
             """
             start_time=$(date +%s)
-            python3 subworkflows_sm/deconvolution/cell2location/run_build.py {input[0]} {input[1]} {output_dir} {use_gpu} {annot}
+            python3 subworkflows/deconvolution/cell2location/run_build.py {input[0]} {input[1]} {output_dir} {use_gpu} {annot}
             end_time=$(date +%s)
             elapsed_time=$((end_time - start_time))
             echo "build_cell2location took $elapsed_time seconds"
@@ -82,7 +81,7 @@ if not load_model:
         shell:
             """
             start_time=$(date +%s)
-            python3 subworkflows_sm/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu} {map_genes}
+            python3 subworkflows/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu} {map_genes}
             end_time=$(date +%s)
             elapsed_time=$((end_time - start_time))
             echo "fit_cell2location took $elapsed_time seconds"
@@ -120,7 +119,7 @@ else:
         shell:
             """
             start_time=$(date +%s)
-            python3 subworkflows_sm/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu} {map_genes}
+            python3 subworkflows/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu} {map_genes}
             end_time=$(date +%s)
             elapsed_time=$((end_time - start_time))
             echo "fit_cell2location took $elapsed_time seconds"
