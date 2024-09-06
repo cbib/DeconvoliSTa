@@ -4,7 +4,7 @@
 """
 Created on Mon Apr 22 16:46:25 2024
 
-Script to generate an interactive plot to show the top 5 cell types obtained
+Script to generate an interactive plot to show the top n cell types obtained
 from an spatial deconvolution analysis
 
 Input:
@@ -44,6 +44,60 @@ clusters_colordict = {
 }
 
 colordict = {
+    "AClike": "#CCCCCC",
+    "AClikeProlif": "#FF6600",
+    "Astrocyte": "#00FFCC",
+    "Bcell": "#F0E442",
+    "CD4INF": "#0066FF",
+    "CD4rest": "#FF00FF",
+    "CD8cytotoxic": "#00FF00",
+    "CD8EM": "#FF6666",
+    "CD8NKsig": "#FFCC00",
+    "cDC1": "#00FFFF",
+    "cDC2": "#FF0066",
+    "DC1": "#CCFF00",
+    "DC2": "#0000FF",
+    "DC3": "#FFCCCC",
+    "Endoarterial": "#CC00FF",
+    "Endocapilar": "#66FF00",
+    "Mast": "#FF00CC",
+    "MESlikehypoxiaindependent": "#990033",
+    "MESlikehypoxiaMHC": "#003399",
+    "Monoantiinfl": "#FF3366",
+    "Monohypoxia": "#00FF66",
+    "Mononaive": "#FF9999",
+    "Neuron": "#6600FF",
+    "NK": "#FFE6E6",
+    "NPClikeneural": "#0072B2",
+    "NPClikeOPC": "#FF0000",
+    "NPClikeProlif": "#999900",
+    "Oligodendrocyte": "#666666",
+    "OPC": "#CCFF99",
+    "OPClike": "#000000",
+    "OPClikeProlif": "#990000",
+    "pDC": "#993300",
+    "Pericyte": "#996600",
+    "Perivascularfibroblast": "#999999",
+    "PlasmaB": "#669900",
+    "ProlifT": "#339900",
+    "RegT": "#CC79A7",
+    "RG": "#009933",
+    "Scavengingendothelial": "#990099",
+    "Scavengingpericyte": "#009900",
+    "SMC": "#330099",
+    "SMCCOL": "#CC9999",
+    "SMCprolif": "#009999",
+    "Stresssig": "#990066",
+    "TAMBDMantiinfl": "#990033",
+    "TAMBDMhypoxiaMES": "#CC3333",
+    "TAMBDMINF": "#CC6666",
+    "TAMBDMMHC": "#660099",
+    "TAMMGagingsig": "#CCCC99",
+    "TAMMGproinflI": "#56B4E9",
+    "TAMMGproinflII": "#333333",
+    "TAMMGprolif": "#99CC99",
+    "Tiplike": "#99CC66",
+    "VLMC": "#99CC33",
     "malignantcell": "#99CB66",
     "macrophage": "#FF3366",  
     "muralcell": "#996600",  
@@ -175,7 +229,7 @@ def vis_with_separate_clusters_view(reduced_df, image_display_infos, nb_spots_sa
         test_df = reduced_df[reduced_df["in_tissue"] == 1].head(nb_spots_samples).copy()
         # Create a single tooltip column for each circle
         test_df['tooltip_data'] = test_df.apply(lambda row: '<br>'.join( \
-                                                [f"<span style='color: red;'> Spot</span> : (x = { row['pxl_col_in_fullres']:.2f}, y = {-row['pxl_row_in_fullres']:.2f})"] ),\
+                                                [f"<span style='color: red;'> Spot</span> : (x = { row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"] ),\
                                                 axis=1)
         # Update the data dictionary
         data = {
@@ -237,7 +291,7 @@ def vis_with_separate_clusters_view(reduced_df, image_display_infos, nb_spots_sa
             f"<span style='color: blue;'>{row[f'Deconv_cell{i+1}']}</span>: {row[f'Deconv_cell{i+1}_norm_value']*100:.2f}%"
             f"</div>"
             for i in range(n_largest_cell_types)
-        ] +  [f"<span style='color: red;'> Spot</span> : (x = {row['pxl_col_in_fullres']:.2f}, y = {-row['pxl_row_in_fullres']:.2f})"]), axis=1)
+        ] +  [f"<span style='color: red;'> Spot</span> : (x = {row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"]), axis=1)
         data["tooltip_data"] = test_df['tooltip_data'].tolist()
         for i in range(1, n_largest_cell_types + 1):
             data[f'DeconvCell{i}'] = test_df[f'Deconv_cell{i}'].tolist()
