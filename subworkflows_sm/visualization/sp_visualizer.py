@@ -1,12 +1,7 @@
 # -*- coding: utf-8 -*-
 """
-<<<<<<< HEAD
-Created on Mon Apr 22 16:46:25 2024
 
-Script to generate an interactive plot to show the top n cell types obtained
-=======
 Script to generate an interactive plot to show the top 5 cell types obtained
->>>>>>> 23617f28823b8739f366d14002da421df1cce1a0
 from an spatial deconvolution analysis
 
 Input:
@@ -50,68 +45,6 @@ colordict = {
     "AClike": "#CCCCCC",
     "AClikeProlif": "#FF6600",
     "Astrocyte": "#00FFCC",
-    "Bcell": "#F0E442",
-    "CD4INF": "#0066FF",
-    "CD4rest": "#FF00FF",
-    "CD8cytotoxic": "#00FF00",
-    "CD8EM": "#FF6666",
-    "CD8NKsig": "#FFCC00",
-    "cDC1": "#00FFFF",
-    "cDC2": "#FF0066",
-    "DC1": "#CCFF00",
-    "DC2": "#0000FF",
-    "DC3": "#FFCCCC",
-    "Endoarterial": "#CC00FF",
-    "Endocapilar": "#66FF00",
-    "Mast": "#FF00CC",
-    "MESlikehypoxiaindependent": "#990033",
-    "MESlikehypoxiaMHC": "#003399",
-    "Monoantiinfl": "#FF3366",
-    "Monohypoxia": "#00FF66",
-    "Mononaive": "#FF9999",
-    "Neuron": "#6600FF",
-    "NK": "#FFE6E6",
-    "NPClikeneural": "#0072B2",
-    "NPClikeOPC": "#FF0000",
-    "NPClikeProlif": "#999900",
-    "Oligodendrocyte": "#666666",
-    "OPC": "#CCFF99",
-    "OPClike": "#000000",
-    "OPClikeProlif": "#990000",
-    "pDC": "#993300",
-    "Pericyte": "#996600",
-    "Perivascularfibroblast": "#999999",
-    "PlasmaB": "#669900",
-    "ProlifT": "#339900",
-    "RegT": "#CC79A7",
-    "RG": "#009933",
-    "Scavengingendothelial": "#990099",
-    "Scavengingpericyte": "#009900",
-    "SMC": "#330099",
-    "SMCCOL": "#CC9999",
-    "SMCprolif": "#009999",
-    "Stresssig": "#990066",
-    "TAMBDMantiinfl": "#990033",
-    "TAMBDMhypoxiaMES": "#CC3333",
-    "TAMBDMINF": "#CC6666",
-    "TAMBDMMHC": "#660099",
-    "TAMMGagingsig": "#CCCC99",
-    "TAMMGproinflI": "#56B4E9",
-    "TAMMGproinflII": "#333333",
-    "TAMMGprolif": "#99CC99",
-    "Tiplike": "#99CC66",
-    "VLMC": "#99CC33",
-    "malignantcell": "#99CB66",
-    "macrophage": "#FF3366",  
-    "muralcell": "#996600",  
-    "dendriticcell": "#00FFFF",  
-    "microglialcell": "#CCCC99",  
-    "monocyte": "#FF9999", 
-    "oligodendrocyte": "#666666",
-    "endothelialcell": "#00FFCC", 
-    "matureTcell": "#0066FF",  
-    "oligodendrocyteprecursorcell": "#CCFF99", 
-    "mastcell": "#FF00CC",
     "Bcell": "#F0E442",
     "CD4INF": "#0066FF",
     "CD4rest": "#FF00FF",
@@ -171,98 +104,98 @@ colordict = {
 # <! ------------------------------------------------------------------------!>
 from PIL import Image
 def process_data(norm_weights_filepath, st_coords_filepath, data_clustered, deconv_method, n_largest_cell_types, scale_factor):
-    # Read spatial deconvolution result CSV file
-    norm_weights_df = pd.read_csv(norm_weights_filepath, sep = '\t')
-    norm_weights_df.index.name = None
-    # print(norm_weights_df.head())
+      # Read spatial deconvolution result CSV file
+      norm_weights_df = pd.read_csv(norm_weights_filepath, sep = '\t')
+      norm_weights_df.index.name = None
+      # print(norm_weights_df.head())
 
-    # Read spatial coordinates CSV file
-    st_coords_df = pd.read_csv(st_coords_filepath, header=None).set_index(0)
-    st_coords_df.index.name = None
-    st_coords_df.columns = [ "in_tissue", "array_row", "array_col", "pxl_row_in_fullres", "pxl_col_in_fullres"]
-    st_coords_df["pxl_row_in_fullres"] = st_coords_df["pxl_row_in_fullres"]*scale_factor
-    st_coords_df["pxl_col_in_fullres"] = st_coords_df["pxl_col_in_fullres"]*scale_factor
-    # It will be difficult to show the information of all 54 cell types when hovering
-    # Thus, for each barcoded spot, retrieve the maximum 5 weights and create new columns
-    # accordingly. Those 5 max columns will be the info shown in the hovertool
-    max_weights = norm_weights_df.apply(lambda x: x.nlargest(n_largest_cell_types).index.values, axis=1)
-    # print(max_weights)
-    merged_df = pd.concat([st_coords_df, norm_weights_df], axis = 1, join = 'inner')
+      # Read spatial coordinates CSV file
+      st_coords_df = pd.read_csv(st_coords_filepath, header=None).set_index(0)
+      st_coords_df.index.name = None
+      st_coords_df.columns = [ "in_tissue", "array_row", "array_col", "pxl_row_in_fullres", "pxl_col_in_fullres"]
+      st_coords_df["pxl_row_in_fullres"] = st_coords_df["pxl_row_in_fullres"]*scale_factor
+      st_coords_df["pxl_col_in_fullres"] = st_coords_df["pxl_col_in_fullres"]*scale_factor
+      # It will be difficult to show the information of all 54 cell types when hovering
+      # Thus, for each barcoded spot, retrieve the maximum 5 weights and create new columns
+      # accordingly. Those 5 max columns will be the info shown in the hovertool
+      max_weights = norm_weights_df.apply(lambda x: x.nlargest(n_largest_cell_types).index.values, axis=1)
+      # print(max_weights)
+      merged_df = pd.concat([st_coords_df, norm_weights_df], axis = 1, join = 'inner')
 
-    data_with_clusters = pd.read_csv(data_clustered)
-    clusters_col =  pd.DataFrame(data_with_clusters["BayesSpace"]).set_index(data_with_clusters["Unnamed: 0"])
-    merged_df["Cluster"] = clusters_col
-
-
-    # Create df columns with max cell types
-    cell_type_storage_arrays = list()
-    cell_value_storage_arrays = list()
-
-    # Extract cell types with largest weights
-    for i in range(n_largest_cell_types):
-
-        cell_type_storage_array = list()
-        cell_value_storage_array = list()
-
-        for barcode in max_weights.index:
-
-            max_cell_types = max_weights.loc[barcode]
-            max_cell_type = max_cell_types[i]
-            max_cell_value = merged_df.loc[barcode, max_cell_types[i]]
-
-            cell_type_storage_array.append(max_cell_type)
-            cell_value_storage_array.append(max_cell_value)
+      data_with_clusters = pd.read_csv(data_clustered)
+      clusters_col =  pd.DataFrame(data_with_clusters["BayesSpace"]).set_index(data_with_clusters["Unnamed: 0"])
+      merged_df["Cluster"] = clusters_col
 
 
-        cell_type_storage_arrays.append(cell_type_storage_array)
-        cell_value_storage_arrays.append(cell_value_storage_array)
+      # Create df columns with max cell types
+      cell_type_storage_arrays = list()
+      cell_value_storage_arrays = list()
 
-    # print(len(cell_type_storage_arrays[0]))
-    # Assign to new columns in the dataframe
-    for i in range(n_largest_cell_types):
-        merged_df[''.join([deconv_method,  '_Deconv_cell', str(i + 1)])] = cell_type_storage_arrays[i]
-        merged_df[''.join([deconv_method, '_Deconv_cell', str(i + 1), '_value'])] = cell_value_storage_arrays[i]
+      # Extract cell types with largest weights
+      for i in range(n_largest_cell_types):
 
-    # Since we only consider the top N cell types, we need to correct the weight
-    # values so that the scatterpies account to the totality of the circle (sum of weights == 1)
+          cell_type_storage_array = list()
+          cell_value_storage_array = list()
 
-    deconv_weight_columns = [f"{deconv_method}_Deconv_cell{i + 1}_value" for i in range(n_largest_cell_types)]
+          for barcode in max_weights.index:
 
-    # Create new normalized columns
-    for i in range(n_largest_cell_types):
+              max_cell_types = max_weights.loc[barcode]
+              max_cell_type = max_cell_types[i]
+              max_cell_value = merged_df.loc[barcode, max_cell_types[i]]
 
-        # Calculate the sum of the top cell type weights
-        total = merged_df.loc[:, deconv_weight_columns].sum(axis=1)
-
-        # Create column with corrected weight values
-        merged_df[''.join([deconv_method, '_Deconv_cell', str(i + 1), '_norm_value'])] =  merged_df[''.join([deconv_method, '_Deconv_cell', str(i + 1), '_value'])] / total
+              cell_type_storage_array.append(max_cell_type)
+              cell_value_storage_array.append(max_cell_value)
 
 
-    # SLim down the df by selecting columns of interest only
-    columns_of_interest = ['pxl_row_in_fullres', 'pxl_col_in_fullres','Cluster' , "in_tissue"] + [f"{deconv_method}_Deconv_cell{i + 1}_norm_value" for i in range(n_largest_cell_types)] \
-        + [f"{deconv_method}_Deconv_cell{i + 1}" for i in range(n_largest_cell_types)]
-    reduced_df = merged_df.loc[:, columns_of_interest]
-    return reduced_df
+          cell_type_storage_arrays.append(cell_type_storage_array)
+          cell_value_storage_arrays.append(cell_value_storage_array)
+
+      # print(len(cell_type_storage_arrays[0]))
+      # Assign to new columns in the dataframe
+      for i in range(n_largest_cell_types):
+          merged_df[''.join([deconv_method,  '_Deconv_cell', str(i + 1)])] = cell_type_storage_arrays[i]
+          merged_df[''.join([deconv_method, '_Deconv_cell', str(i + 1), '_value'])] = cell_value_storage_arrays[i]
+
+      # Since we only consider the top N cell types, we need to correct the weight
+      # values so that the scatterpies account to the totality of the circle (sum of weights == 1)
+
+      deconv_weight_columns = [f"{deconv_method}_Deconv_cell{i + 1}_value" for i in range(n_largest_cell_types)]
+
+      # Create new normalized columns
+      for i in range(n_largest_cell_types):
+
+          # Calculate the sum of the top cell type weights
+          total = merged_df.loc[:, deconv_weight_columns].sum(axis=1)
+
+          # Create column with corrected weight values
+          merged_df[''.join([deconv_method, '_Deconv_cell', str(i + 1), '_norm_value'])] =  merged_df[''.join([deconv_method, '_Deconv_cell', str(i + 1), '_value'])] / total
+
+
+      # SLim down the df by selecting columns of interest only
+      columns_of_interest = ['pxl_row_in_fullres', 'pxl_col_in_fullres','Cluster' , "in_tissue"] + [f"{deconv_method}_Deconv_cell{i + 1}_norm_value" for i in range(n_largest_cell_types)] \
+          + [f"{deconv_method}_Deconv_cell{i + 1}" for i in range(n_largest_cell_types)]
+      reduced_df = merged_df.loc[:, columns_of_interest]
+      return reduced_df
 
 
 import base64
 import io
 def image_to_base64(image_path):
-    with open(image_path, "rb") as image_file:
-        encoded_string = base64.b64encode(image_file.read()).decode()
-    return f"data:image/png;base64,{encoded_string}"
+        with open(image_path, "rb") as image_file:
+            encoded_string = base64.b64encode(image_file.read()).decode()
+        return f"data:image/png;base64,{encoded_string}"
 def get_image_display_infos(image_path):
-    im = Image.open(image_path).convert("RGB")
-    # Merge coordinate df and cell weight df
-    image_display_infos = {
-        "image_path" : image_path,
-        "x0" : 0,
-        "y0" : 0,
-        "im_w" : im.size[0],
-        "im_h" : im.size[1],
+      im = Image.open(image_path).convert("RGB")
+      # Merge coordinate df and cell weight df
+      image_display_infos = {
+          "image_path" : image_path,
+          "x0" : 0,
+          "y0" : 0,
+          "im_w" : im.size[0],
+          "im_h" : im.size[1],
 
-    }
-    return image_display_infos
+      }
+      return image_display_infos
 # <! ------------------------------------------------------------------------!>
 # <!                       BOKEH VISUALIZATION                               !>
 # <! ------------------------------------------------------------------------!>
@@ -334,19 +267,19 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
                                 source=source,
                                 legend_label=f"Cluster {int(cluster)}")
             scatter_renderers[cluster] = scatter
-
-        # Create a single tooltip column for each circle
-        test_df['tooltip_data'] = test_df.apply(lambda row: '<br>'.join([
-            f"<div style='display:flex;align-items:center;'>"
-            f"<div style='width:10px;height:10px;background-color:{colordict.get(row[f'Deconv_cell{i+1}'], '#000000')};margin-right:5px;'></div>"
-            f"<span style='color: blue;'>{row[f'Deconv_cell{i+1}']}</span>: {row[f'Deconv_cell{i+1}_norm_value']*100:.2f}%"
-            f"</div>"
-            for i in range(n_largest_cell_types)
-        ] +  [f"<span style='color: red;'> Spot</span> : (x = {row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"]), axis=1)
-        data["tooltip_data"] = test_df['tooltip_data'].tolist()
-        for i in range(1, n_largest_cell_types + 1):
-            data[f'DeconvCell{i}'] = test_df[f'Deconv_cell{i}'].tolist()
-            data[f'DeconvCell{i}_w'] = test_df[f'Deconv_cell{i}_norm_value'].tolist()
+        for method in deconv_methods:
+          # Create a single tooltip column for each circle
+          test_df[f"{method}_tooltip_data"] = test_df.apply(lambda row: '<br>'.join([
+              f"<div style='display:flex;align-items:center;'>"
+              f"<div style='width:10px;height:10px;background-color:{colordict.get(row[f'{method}_Deconv_cell{i+1}'], '#000000')};margin-right:5px;'></div>"
+              f"<span style='color: blue;'>{row[f'{method}_Deconv_cell{i+1}']}</span>: {row[f'{method}_Deconv_cell{i+1}_norm_value']*100:.2f}%"
+              f"</div>"
+              for i in range(n_largest_cell_types)
+          ] +  [f"<span style='color: red;'> Spot</span> : (x = {row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"]), axis=1)
+          data[f"{method}_tooltip_data"] = test_df[f"{method}_tooltip_data"].tolist()
+          for i in range(1, n_largest_cell_types + 1):
+              data[f'{method}_DeconvCell{i}'] = test_df[f'{method}_Deconv_cell{i}'].tolist()
+              data[f'{method}_DeconvCell{i}_w'] = test_df[f'{method}_Deconv_cell{i}_norm_value'].tolist()
         # Convert dictionary to dataframe
         df = pd.DataFrame(data)
         deconv_plots = []
@@ -532,8 +465,6 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
 
 
 
-
-
 # <! ------------------------------------------------------------------------!>
 # <!                       BOKEH VISUALIZATION                               !>
 # <! ------------------------------------------------------------------------!>
@@ -692,13 +623,16 @@ def vis_with_proportions(reduced_df, image_display_infos, nb_spots_samples, outp
 if __name__ == "__main__":
     import sys
     argv = sys.argv
-    norm_weights_filepaths = argv[1].split(',')
-    st_coords_filepath = argv[2]
-    data_clustered = argv[3]
-    image_path = argv[4]
-    n_largest_cell_types = int(argv[5])
-    scale_factor = float(argv[6])
-    output_html = argv[7]
+    sp_input = argv[1]
+    norm_weights_filepaths = argv[2].split(',')
+    st_coords_filepath = argv[3]
+    data_clustered = argv[4]
+    image_path = argv[5]
+    n_largest_cell_types = int(argv[6])
+    scale_factor = float(argv[7])
+    output_html = argv[8]
+    deconv_methods = argv[9].split(',')
+    print(argv)
     print("Processing data ...\n")
     # norm_weights_filepaths = ["drive/MyDrive/proportions_rctd_sample243_chunk1",  "drive/MyDrive/proportions_cell2location_UKF243_T_ST_1_raw_001_chunk_1.tsv"]
     norm_weights_dfs = [process_data(props, st_coords_filepath,data_clustered, deconv_methods[index], n_largest_cell_types, scale_factor = scale_factor)\
@@ -707,7 +641,6 @@ if __name__ == "__main__":
     for i in range(1, len(norm_weights_dfs)):
         processed_data = pd.merge(processed_data, norm_weights_dfs[i])
     print(f"Deconvolution methods {deconv_methods}")
-    deconv_methods = argv[8].split(',')
     print(f"Generating vis with {processed_data.shape[0]} spots and top {n_largest_cell_types} cells...\n")
     nb_spots_samples = processed_data.shape[0]
     vis_with_separate_clusters_view(reduced_df=processed_data, image_path = image_path, deconv_methods = deconv_methods,nb_spots_samples = nb_spots_samples, output= output_html )
