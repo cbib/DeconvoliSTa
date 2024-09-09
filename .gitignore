@@ -68,4 +68,9 @@ trace*
 .condarc
 .keras/
 .local/
-rctd_res_cluster/
+rctd_res_cluster/*
+.pybiomart.sqlite
+.theano/
+github.com/
+none.R
+res/*

@@ -1,13 +1,9 @@
 # -*- coding: utf-8 -*-
 """
 
-Script to generate an interactive plot to show the top 5 cell types obtained
+Script to generate an interactive plot to show the top n cell types obtained
 from an spatial deconvolution analysis
-
-Input:
-    => CSV file containing normalized weights [barcodes as rownames, cell types as colnames]
-    => CSV file containing spatial coordinates [barcodes as rownames, x and y coordinates as columns]
-
+See documenation for use parameters .
 """
 # <! ------------------------------------------------------------------------!>
 # <!                       IMPORTS                                           !>
@@ -20,7 +16,9 @@ from bokeh.transform import cumsum
 from bokeh.models import ColumnDataSource, HoverTool,Range1d
 from bokeh.palettes import Category20
 from bokeh.models import CustomJS, TapTool
-
+from PIL import Image
+import base64
+import io
 # Define color dictionary
 clusters_colordict = {
     0: "#CCCCCC",
@@ -102,12 +100,10 @@ colordict = {
 # <! ------------------------------------------------------------------------!>
 # <!                           DATA PREPARATION                              !>
 # <! ------------------------------------------------------------------------!>
-from PIL import Image
 def process_data(norm_weights_filepath, st_coords_filepath, data_clustered, deconv_method, n_largest_cell_types, scale_factor):
       # Read spatial deconvolution result CSV file
       norm_weights_df = pd.read_csv(norm_weights_filepath, sep = '\t')
       norm_weights_df.index.name = None
-      # print(norm_weights_df.head())
 
       # Read spatial coordinates CSV file
       st_coords_df = pd.read_csv(st_coords_filepath, header=None).set_index(0)
@@ -119,7 +115,6 @@ def process_data(norm_weights_filepath, st_coords_filepath, data_clustered, deco
       # Thus, for each barcoded spot, retrieve the maximum 5 weights and create new columns
       # accordingly. Those 5 max columns will be the info shown in the hovertool
       max_weights = norm_weights_df.apply(lambda x: x.nlargest(n_largest_cell_types).index.values, axis=1)
-      # print(max_weights)
       merged_df = pd.concat([st_coords_df, norm_weights_df], axis = 1, join = 'inner')
 
       data_with_clusters = pd.read_csv(data_clustered)
@@ -150,7 +145,6 @@ def process_data(norm_weights_filepath, st_coords_filepath, data_clustered, deco
           cell_type_storage_arrays.append(cell_type_storage_array)
           cell_value_storage_arrays.append(cell_value_storage_array)
 
-      # print(len(cell_type_storage_arrays[0]))
       # Assign to new columns in the dataframe
       for i in range(n_largest_cell_types):
           merged_df[''.join([deconv_method,  '_Deconv_cell', str(i + 1)])] = cell_type_storage_arrays[i]
@@ -178,8 +172,7 @@ def process_data(norm_weights_filepath, st_coords_filepath, data_clustered, deco
       return reduced_df
 
 
-import base64
-import io
+
 def image_to_base64(image_path):
         with open(image_path, "rb") as image_file:
             encoded_string = base64.b64encode(image_file.read()).decode()
@@ -202,9 +195,7 @@ def get_image_display_infos(image_path):
 from bokeh.events import ButtonClick
 from bokeh.models import BoxAnnotation, Label, Plot, Rect, Text, Button, CustomJS, Div,Slider, PanTool
 from bokeh.plotting import figure
-from bokeh.transform import factor_cmap
 from bokeh.layouts import column, row, gridplot,Spacer
-from PIL import Image
 import numpy as np
 def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_spots_samples, output , show_legend = False, show_figure = False ):
         image_display_infos = get_image_display_infos(image_path)
@@ -283,7 +274,6 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         # Convert dictionary to dataframe
         df = pd.DataFrame(data)
         deconv_plots = []
-        # print(df.head(5))
         for method in deconv_methods:
           plot = figure(width=image_display_infos.get("im_w"),
                       height=image_display_infos.get("im_h"),
@@ -458,7 +448,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
             show(layout)
         output_file(output, mode='inline')
         save(layout)
-        
+
 # <! ------------------------------------------------------------------------!>
 # <!                       BOKEH VISUALIZATION                               !>
 # <! ------------------------------------------------------------------------!>
@@ -474,9 +464,7 @@ if __name__ == "__main__":
     scale_factor = float(argv[7])
     output_html = argv[8]
     deconv_methods = argv[9].split(',')
-    print(argv)
     print("Processing data ...\n")
-    # norm_weights_filepaths = ["drive/MyDrive/proportions_rctd_sample243_chunk1",  "drive/MyDrive/proportions_cell2location_UKF243_T_ST_1_raw_001_chunk_1.tsv"]
     norm_weights_dfs = [process_data(props, st_coords_filepath,data_clustered, deconv_methods[index], n_largest_cell_types, scale_factor = scale_factor)\
                         for index, props  in enumerate(norm_weights_filepaths)]
     processed_data = norm_weights_dfs[0]
