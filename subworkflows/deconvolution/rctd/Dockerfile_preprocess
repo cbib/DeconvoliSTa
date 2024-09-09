@@ -1,7 +1,7 @@
 # Build RCTD
 FROM csangara/sp_rctd
 RUN R -e "library(RCTD)"
-##added by me
+##
 RUN export RHOME=/usr/local/lib/R 
 RUN . ~/.bashrc
 RUN R -e "if (!require('BiocManager', quietly = TRUE)) install.packages('BiocManager')"
