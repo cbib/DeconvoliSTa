@@ -4,7 +4,8 @@ library(SeuratDisk)
 library(Seurat)
 
 par <- list(
-  output_file_ext = ""
+  output_file_ext = "",
+  annot = "annotation_level_4"
 )
 
 args <- R.utils::commandArgs(trailingOnly=TRUE, asValues=TRUE)
@@ -29,13 +30,13 @@ if (tolower(ext) == "rds"){
   
   # Use raw counts
   DefaultAssay(seurat_obj) <- names(seurat_obj@assays)[grep("RNA|Spatial", names(seurat_obj@assays))[1]]
-  
   # SeuratDisk cannot work with a Seurat object older than v3.1.2
   if (compareVersion(as.character(seurat_obj@version), "3.1.2") == -1){
     print("Seurat object is too old, creating a new one...")
     seurat_obj <- CreateSeuratObject(counts = GetAssayData(seurat_obj, slot="counts"),
                                      assay = DefaultAssay(seurat_obj),
                                      meta.data=seurat_obj@meta.data)
+    seurat_obj@meta.data[[par$annot]] <- as.character(seurat_obj@meta.data[[par$annot]])
   }
   
   # If the object has been preprocessed before, SeuratDisk is going to place the
@@ -45,9 +46,11 @@ if (tolower(ext) == "rds"){
   if (!isTRUE(all.equal(GetAssayData(seurat_obj, slot="counts"), GetAssayData(seurat_obj, slot="data"))) ||
       all(dim(GetAssayData(seurat_obj, slot="scale.data")) > 0)){
     cat("The Seurat object has been preprocessed. Creating a new object...")
+   
     seurat_obj <- CreateSeuratObject(counts = GetAssayData(seurat_obj, slot="counts"),
                                      assay = DefaultAssay(seurat_obj),
                                      meta.data=seurat_obj@meta.data)
+    seurat_obj@meta.data[[par$annot]] <- as.character(seurat_obj@meta.data[[par$annot]])
   }
   gc()
   

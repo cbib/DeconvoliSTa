@@ -16,29 +16,27 @@ sp_input = config["sp_input"]
 output_dir = config["output"]
 output_suffix = get_basename(sp_input)
 runID_props = params["runID_props"]
-method = "rctd"
+method = "ddls"
 output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
 deconv_args = params['deconv_args']
 # Définir le chemin absolu du script R
-script_dir = os.path.dirname(os.path.abspath(__file__))
-rctd_script = "subworkflows/deconvolution/rctd/script_nf.R"
+ddls_script = "subworkflows/deconvolution/ddls/script.R"
 annot = config["annot"] if "annot" in config.keys() else params['annot']
-map_genes = config.get("map_genes", "false")
+use_gpu = config["use_gpu"] if "use_gpu" in config.keys() else "false"
 
-rule run_rctd:
+rule run_ddls:
     input:
         sc_input=sc_input,
         sp_input=sp_input
     output:
         output
     singularity:
-        "docker://abderahim02/sp_rctd:latest" #"docker://csangara/sp_rctd:latest"
+        "docker://abderahim02/sp_ddls:latest" #"ddls.sif"
     threads:
         12
-    shell:
+    shell: # --output {output} --epochs 10000 --batch_size 10
         """
-        Rscript {rctd_script} \
+        Rscript {ddls_script} \
             --sc_input {input.sc_input} --sp_input {input.sp_input} \
-            --annot {annot} --output {output} --map_genes {map_genes} --num_cores {threads} 
+            --output {output} --epochs 20000 --batch_size 15 --use_gpu {use_gpu}
         """
-

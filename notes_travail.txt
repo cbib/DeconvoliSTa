@@ -230,4 +230,13 @@ snakemake -s  main.smk -c8 --config mode="generate_vis" sp_input="UKF243_T_ST_1_
 
 source activate cell2loc_env && python subworkflows_sm/deconvolution/cell2location/build_model.py core_GBMap.h5ad cpu   -a annotation_level_4 -o res 
 
- python subworkflows_sm/deconvolution/cell2location/fit_model.py UKF243_T_ST_1_raw.h5ad  res/sc.h5ad cpu -e 100 -o res  -m {true} && mv res/proportions.tsv res/tst.tsv
+python subworkflows_sm/deconvolution/cell2location/fit_model.py UKF243_T_ST_1_raw.h5ad  res/sc.h5ad cpu -e 100 -o res  -m true && mv res/proportions.tsv res/tst.tsv
+
+
+
+
+python subworkflows_sm/deconvolution/cell2location/fit_model.py UKF243_T_ST_1_raw.h5ad  /abderahim/data/sc.h5ad 0 -e 30000 -o res  -m true && mv res/proportions.tsv res/proportions_cell2location_ab.tsv
+
+
+
+snakemake -s main.smk -c8 --config mode="run_dataset" methods=cell2location sc_input="unit-test/test_sc_data.rds" sp_input="unit-test/test_sp_data.rds" output="res" use_gpu="true" skip_metrics="true" annot="subclass" map_genes='false' load_model="true" model_path="res/sc_test_sc_data_test_sp_data.h5ad" --use-singularity --singularity-args '\--nv'
