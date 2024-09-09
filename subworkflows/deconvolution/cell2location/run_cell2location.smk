@@ -52,8 +52,8 @@ if not load_model:
             rules.convertBetweenRDSandH5AD.output.sc_h5ad_file,
             rules.convertBetweenRDSandH5AD.output.sp_h5ad_file
         output:
-            # temp(f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad")
-            f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad"
+            temp(f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad")
+            # f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad"
         singularity:
             "docker://csangara/sp_cell2location:latest"
         threads:
@@ -66,12 +66,10 @@ if not load_model:
             elapsed_time=$((end_time - start_time))
             echo "build_cell2location took $elapsed_time seconds"
             """
-    # model_path  = f"{output_dir}/sc.h5ad"
     rule fit_cell2location:
         input:
             rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
             model= rules.build_cell2location.output
-            # model = model_path
         output:
             temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
         singularity:
@@ -108,7 +106,6 @@ else:
     rule fit_cell2location:
         input:
             rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
-            # model= rules.build_cell2location.output
             model = model_path
         output:
             temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
