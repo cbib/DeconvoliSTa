@@ -69,6 +69,7 @@ trace*
 .keras/
 .local/
 rctd_res_cluster/*
+res_rctd_cluster/
 .pybiomart.sqlite
 .theano/
 github.com/
