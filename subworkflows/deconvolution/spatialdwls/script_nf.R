@@ -4,6 +4,28 @@ library(Seurat)
 library(Giotto)
 library(magrittr)
 
+library(org.Hs.eg.db)
+convert_query_geneSymbol_to_ensemblID <- function(spatial_query){
+  
+  ## Function to convert gene symbols in query to ensemble IDs [e.g. GBMap is in ENSEMBL while Visium is in Symbol]
+  ## The following code chunk is to be applied only if the reference single cell dataset
+  ## contains ENSEMBL identifiers instead of gene symbols (as in Visium data)
+  
+  master_gene_table <- mapIds(org.Hs.eg.db, keys = rownames(spatial_query@counts), keytype = "SYMBOL", column="ENSEMBL")
+  #master_gene_table <- as.data.frame(master_gene_table)
+    cat ("oaak\n")
+  # get the Ensembl ids with gene symbols i.e. remove those with NA's for gene symbols
+  inds <- which(!is.na(master_gene_table))
+  found_genes <- master_gene_table[inds]
+  
+  # subset your data frame based on the found_genes
+  df2 <- spatial_query@counts[names(found_genes), ]
+  rownames(df2) <- found_genes
+  spatial_query@counts <- df2
+  
+  return(spatial_query)
+}
+
 par <- list(
   n_topmarkers = 100,     # Number of top marker genes per cell type to use
 
@@ -23,7 +45,11 @@ par <- list(
   downsample_genes = TRUE, # If dense matrix is too big, downsample genes
   n_hvgs = 3000,           # Number of highly variable genes to keep
   pct = 0.1,               # Percentage of cells which genes have to be expressed
-  assay_oi = "RNA"
+  assay_oi = "RNA",
+  sc_input = 'datafiles_st_deconvolution/core_GBMap.rds',
+  sp_input = 'datafiles_st_deconvolution/UKF243_T_ST_1_raw.rds',
+  output = "props_dwls_coremap.tsv",
+  annot = "annotation_level_4"
 )
 
 # Replace default values by user input
@@ -55,7 +81,9 @@ giotto_obj_scRNA <- normalizeGiotto(giotto_obj_scRNA)
 
 cat("Reading input spatial data from", par$sp_input, "\n")
 spatial_data <- readRDS(par$sp_input)
-
+if (par$map_genes == 'true'){
+  spatial_data = convert_query_geneSymbol_to_ensemblID(spatial_data)
+}
 cat("Converting spatial data to Giotto object...\n")
 if (class(spatial_data) != "Seurat"){
   # Somehow if the spot names consist only of numbers, there is an error downstream

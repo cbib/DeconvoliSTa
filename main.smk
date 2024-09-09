@@ -156,8 +156,16 @@ skip_metrics = get_config_var(config, "skip_metrics", "false")
 if mode == "run_dataset":
     sc_input = get_config_var(config, "sc_input")
     sp_input = get_config_var(config, "sp_input")
+    # methods = get_config_var(config, "methods").split(',')
+    supported_methods = {"cell2location", "rctd", "spatialdwls", "nnls", "ddls", "dirichlet", "seurat"}
     methods = get_config_var(config, "methods").split(',')
-    
+    methods_set = set(methods)
+    # Find unsupported methods by subtracting the supported methods from the methods set
+    unsupported_methods = methods_set - supported_methods
+    # If there are unsupported methods, raise an error with the appropriate message
+    if unsupported_methods:
+        raise ValueError(f"Error: The following methods are not supported: {', '.join(unsupported_methods)}")
+
     output_suffix = get_basename(sp_input)
     runID_props = get_config_var(params, "runID_props")
     include: "subworkflows/deconvolution/run_methods.smk"

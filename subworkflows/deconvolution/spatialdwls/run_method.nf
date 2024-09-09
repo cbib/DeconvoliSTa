@@ -2,7 +2,6 @@ process runSpatialDWLS {
     tag "spatialdwls_$output_suffix"
     label "retry"
     container 'csangara/sp_spatialdwls:latest'
-    publishDir { "${params.outdir.props}/${output_suffix.replaceFirst(/_[a-z]{3}[0-9]+/, "")}" },
                 mode: 'copy', pattern: "proportions_*"
     input:
         tuple path (sc_input), path (sp_input)
