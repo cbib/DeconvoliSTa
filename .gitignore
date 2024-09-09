@@ -64,3 +64,8 @@ trace*
 *png
 
 .snakemake/
+.conda/
+.condarc
+.keras/
+.local/
+rctd_res_cluster/
