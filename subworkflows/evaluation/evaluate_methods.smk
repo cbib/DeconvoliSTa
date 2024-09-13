@@ -2,7 +2,7 @@ import os
 import yaml
 
 # Charger le fichier de configuration
-with open("subworkflows/evaluation/my_config.yaml", "r") as config_file:
+with open("subworkflows/evaluation/config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
 # Préparez les chemins d'entrée/sortie

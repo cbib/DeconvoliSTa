@@ -195,263 +195,396 @@ def get_image_display_infos(image_path):
 from bokeh.events import ButtonClick
 from bokeh.models import BoxAnnotation, Label, Plot, Rect, Text, Button, CustomJS, Div,Slider, PanTool
 from bokeh.plotting import figure
+from bokeh.transform import factor_cmap
 from bokeh.layouts import column, row, gridplot,Spacer
+from PIL import Image
 import numpy as np
+
+import math
+
+def calculate_rmsd(vector1, vector2):
+    if len(vector1) != len(vector2):
+        raise ValueError("The vectors must be of the same length")
+    
+    squared_diffs = [(v1 - v2) ** 2 for v1, v2 in zip(vector1, vector2)]
+    mean_squared_diff = sum(squared_diffs) / len(vector1)
+    return math.sqrt(mean_squared_diff)
+
+def rmsd_for_multiple_pairs(vectors):
+    n = len(vectors)
+    rmsd_results = []
+    
+    # Iterate over all possible pairs of vectors
+    for i in range(n):
+        for j in range(i + 1, n):
+            rmsd_value = calculate_rmsd(vectors[i], vectors[j])
+            rmsd_results.append(rmsd_value)
+    
+    return rmsd_results
+
+
+
+
+    
 def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_spots_samples, output , show_legend = False, show_figure = False ):
-        image_display_infos = get_image_display_infos(image_path)
-        image_display_infos = {x: int(np.ceil(image_display_infos[x]/2)) if x != "image_path" else image_display_infos[x] for x in image_display_infos}
-        # Smaller sample
-        test_df = reduced_df[reduced_df["in_tissue"] == 1].head(nb_spots_samples).copy()
+    image_display_infos = get_image_display_infos(image_path)
+    image_display_infos = {x: int(np.ceil(image_display_infos[x]/2)) if x != "image_path" else image_display_infos[x] for x in image_display_infos}
+    # Smaller sample
+    test_df = reduced_df[reduced_df["in_tissue"] == 1].head(nb_spots_samples).copy()
+    # Create a single tooltip column for each circle
+    test_df['tooltip_data'] = test_df.apply(lambda row: '<br>'.join( \
+                                            [f"<span style='color: red;'> Spot</span> : (x = { row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"] ),\
+                                            axis=1)
+    # Update the data dictionary
+    data = {
+        'x': [y/2 for y in test_df.pxl_col_in_fullres.tolist()],
+        'y': [-x/2 for x in test_df.pxl_row_in_fullres.tolist()],
+        'tooltip_data': test_df['tooltip_data'].tolist(),
+        'Cluster' : test_df['Cluster'].tolist() ,
+        'rmsd_value' : test_df["rmsd_value"].tolist()
+    }
+    # Convert dictionary to dataframe
+    df = pd.DataFrame(data)
+    # Initialize the Bokeh plot
+    p = figure(width = image_display_infos.get("im_w"), height = image_display_infos.get("im_h"),
+                title = "Clustering results",
+                x_axis_label = 'x',
+                y_axis_label = 'y',
+                output_backend="webgl"
+                )
+    # Add the image with a ColumnDataSource
+    image_source = ColumnDataSource(data=dict(
+        url=[ image_to_base64(image_display_infos.get("image_path"))],
+        x=[ image_display_infos.get("x0") ],
+        y=[ image_display_infos.get("y0") ],
+        w=[image_display_infos.get("im_w") ],
+        h=[ image_display_infos.get("im_h") ],
+        alpha=[1.0]  # Initial alpha value
+    ))
+    image = p.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
+    # Create a slider for image transparency
+    slider = Slider(start=0, end=1, value=1, step=.1, title="Image Transparency")
+    # Create a callback to update the image alpha
+    callback = CustomJS(args=dict(image_source=image_source), code="""
+        var alpha = cb_obj.value;
+        image_source.data['alpha'] = [alpha];
+        image_source.change.emit();
+    """)
+
+    slider.js_on_change('value', callback)
+    # Create a dictionary to store scatter renderers
+    scatter_renderers = {}
+    # Group the dataframe by cluster
+    grouped = df.groupby('Cluster')
+    # Plot each cluster separately
+    for cluster, group in grouped:
+        color = clusters_colordict.get(cluster, '#000000')
+        source = ColumnDataSource(group)
+
+        scatter = p.scatter(x='x', y='y', size=7,
+                            marker="circle",  # Specify the marker shape
+                            fill_color=color
+                            , line_width=0,
+                            source=source,
+                            legend_label=f"Cluster {int(cluster)}")
+        scatter_renderers[cluster] = scatter
+    for method in deconv_methods:
         # Create a single tooltip column for each circle
-        test_df['tooltip_data'] = test_df.apply(lambda row: '<br>'.join( \
-                                                [f"<span style='color: red;'> Spot</span> : (x = { row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"] ),\
-                                                axis=1)
-        # Update the data dictionary
-        data = {
-            'x': [y/2 for y in test_df.pxl_col_in_fullres.tolist()],
-            'y': [-x/2 for x in test_df.pxl_row_in_fullres.tolist()],
-            'tooltip_data': test_df['tooltip_data'].tolist(),
-            'Cluster' : test_df['Cluster'].tolist() ,
-        }
-        # Convert dictionary to dataframe
-        df = pd.DataFrame(data)
-        # Initialize the Bokeh plot
-        p = figure(width = image_display_infos.get("im_w"), height = image_display_infos.get("im_h"),
-                    title = "Clustering results",
-                    x_axis_label = 'x',
-                    y_axis_label = 'y',
-                   output_backend="webgl"
-                    )
-        # Add the image with a ColumnDataSource
-        image_source = ColumnDataSource(data=dict(
-            url=[ image_to_base64(image_display_infos.get("image_path"))],
-            x=[ image_display_infos.get("x0") ],
-            y=[ image_display_infos.get("y0") ],
-            w=[image_display_infos.get("im_w") ],
-            h=[ image_display_infos.get("im_h") ],
-            alpha=[1.0]  # Initial alpha value
-        ))
-        image = p.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
-        # Create a slider for image transparency
-        slider = Slider(start=0, end=1, value=1, step=.1, title="Image Transparency")
-        # Create a callback to update the image alpha
-        callback = CustomJS(args=dict(image_source=image_source), code="""
-            var alpha = cb_obj.value;
-            image_source.data['alpha'] = [alpha];
-            image_source.change.emit();
-        """)
+        test_df[f"{method}_tooltip_data"] = test_df.apply(lambda row: '<br>'.join([
+            f"<div style='display:flex;align-items:center;'>"
+            f"<div style='width:10px;height:10px;background-color:{colordict.get(row[f'{method}_Deconv_cell{i+1}'], '#000000')};margin-right:5px;'></div>"
+            f"<span style='color: blue;'>{row[f'{method}_Deconv_cell{i+1}']}</span>: {row[f'{method}_Deconv_cell{i+1}_norm_value']*100:.2f}%"
+            f"</div>"
+            for i in range(n_largest_cell_types)
+        ] +  [f"<span style='color: red;'> Spot</span> : (x = {row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"]), axis=1)
+        data[f"{method}_tooltip_data"] = test_df[f"{method}_tooltip_data"].tolist()
+        for i in range(1, n_largest_cell_types + 1):
+            data[f'{method}_DeconvCell{i}'] = test_df[f'{method}_Deconv_cell{i}'].tolist()
+            data[f'{method}_DeconvCell{i}_w'] = test_df[f'{method}_Deconv_cell{i}_norm_value'].tolist()
+    # Convert dictionary to dataframe
+    df = pd.DataFrame(data)
+    deconv_plots = []
+    # print(df.head(5))
+    for method in deconv_methods:
+        plot = figure(width=image_display_infos.get("im_w"),
+                    height=image_display_infos.get("im_h"),
+                title="Deconvolution results",
+                x_axis_label='x',
+                y_axis_label='y',
+                output_backend="webgl",
+                )
+        plot.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
+        # Create a Div for displaying the message
+        for index, row in df.iterrows():
+            x, y = row['x'], row['y']
+            categories = row[[f'{method}_DeconvCell{i+1}_w' for i in range(n_largest_cell_types)]].values
+            cell_types = row[[f'{method}_DeconvCell{i+1}' for i in range(n_largest_cell_types)]].values
+            colors = tuple([colordict[x] for x in cell_types])
+            # Create a single ColumnDataSource for all wedges in this circle
+            circle_source = ColumnDataSource({
+                'x': [x],
+                'y': [y],
+                f"{method}_tooltip_data": [row[f"{method}_tooltip_data"]]
+            })
+            start_angle = 0
+            for i, category_value in enumerate(categories):
+                end_angle = start_angle + category_value * 2 * pi
+                wedge = plot.wedge(x='x', y='y', radius=5,
+                        start_angle=start_angle, end_angle=end_angle,
+                        line_width=0, fill_color=colors[i],
+                        legend_label=f"Cluster {row['Cluster']}", source=circle_source, visible=False)
+                start_angle = end_angle
+        deconv_plots.append(plot)
+    from bokeh.models import LinearColorMapper, ColorBar
+    from bokeh.transform import transform
+    from bokeh.palettes import Viridis256
 
-        slider.js_on_change('value', callback)
-        # Create a dictionary to store scatter renderers
-        scatter_renderers = {}
-        # Group the dataframe by cluster
-        grouped = df.groupby('Cluster')
-        # Plot each cluster separately
-        for cluster, group in grouped:
-            color = clusters_colordict.get(cluster, '#000000')
-            source = ColumnDataSource(group)
+    rmsd_plot = figure(width=image_display_infos.get("im_w"),
+                        height=image_display_infos.get("im_h"),
+                        title="RMSD between deconvolution results",
+                        x_axis_label='x',
+                        y_axis_label='y',
+                        output_backend="webgl")
 
-            scatter = p.scatter(x='x', y='y', size=7,
-                                marker="circle",  # Specify the marker shape
-                                fill_color=color
-                                , line_width=0,
-                                source=source,
-                                legend_label=f"Cluster {int(cluster)}")
-            scatter_renderers[cluster] = scatter
-        for method in deconv_methods:
-          # Create a single tooltip column for each circle
-          test_df[f"{method}_tooltip_data"] = test_df.apply(lambda row: '<br>'.join([
-              f"<div style='display:flex;align-items:center;'>"
-              f"<div style='width:10px;height:10px;background-color:{colordict.get(row[f'{method}_Deconv_cell{i+1}'], '#000000')};margin-right:5px;'></div>"
-              f"<span style='color: blue;'>{row[f'{method}_Deconv_cell{i+1}']}</span>: {row[f'{method}_Deconv_cell{i+1}_norm_value']*100:.2f}%"
-              f"</div>"
-              for i in range(n_largest_cell_types)
-          ] +  [f"<span style='color: red;'> Spot</span> : (x = {row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"]), axis=1)
-          data[f"{method}_tooltip_data"] = test_df[f"{method}_tooltip_data"].tolist()
-          for i in range(1, n_largest_cell_types + 1):
-              data[f'{method}_DeconvCell{i}'] = test_df[f'{method}_Deconv_cell{i}'].tolist()
-              data[f'{method}_DeconvCell{i}_w'] = test_df[f'{method}_Deconv_cell{i}_norm_value'].tolist()
-        # Convert dictionary to dataframe
-        df = pd.DataFrame(data)
-        deconv_plots = []
-        for method in deconv_methods:
-          plot = figure(width=image_display_infos.get("im_w"),
-                      height=image_display_infos.get("im_h"),
-                    title="Deconvolution results",
-                    x_axis_label='x',
-                    y_axis_label='y',
-                    output_backend="webgl",
-                    )
-          plot.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
-          # Create a Div for displaying the message
-          for index, row in df.iterrows():
-              x, y = row['x'], row['y']
-              categories = row[[f'{method}_DeconvCell{i+1}_w' for i in range(n_largest_cell_types)]].values
-              cell_types = row[[f'{method}_DeconvCell{i+1}' for i in range(n_largest_cell_types)]].values
-              colors = tuple([colordict[x] for x in cell_types])
-              # Create a single ColumnDataSource for all wedges in this circle
-              circle_source = ColumnDataSource({
-                  'x': [x],
-                  'y': [y],
-                  f"{method}_tooltip_data": [row[f"{method}_tooltip_data"]]
-              })
-              start_angle = 0
-              for i, category_value in enumerate(categories):
-                  end_angle = start_angle + category_value * 2 * pi
-                  wedge = plot.wedge(x='x', y='y', radius=5,
-                          start_angle=start_angle, end_angle=end_angle,
-                          line_width=0, fill_color=colors[i],
-                          legend_label=f"Cluster {row['Cluster']}", source=circle_source, visible=False)
-                  start_angle = end_angle
-          deconv_plots.append(plot)
-        text1 = """
-            <div style="
-                background-color: #f0f0f0;
-                border: 2px solid #3c3c3c;
-                border-radius: 10px;
-                padding: 15px;
-                margin: 10px 0;
-                font-family: 'Helvetica', 'Arial', sans-serif;
-                font-size: 14px;
-                line-height: 1.5;
-                color: #333333;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            ">
-                <h3 style="
-                    margin-top: 0;
-                    color: #2c3e50;
-                    font-size: 18px;
-                    border-bottom: 1px solid #bdc3c7;
-                    padding-bottom: 8px;
-                ">Information sur la visualisation</h3>
-                <p style="margin-bottom: 0;">
-                    Cette vue montre les clusters. Chaque point représente un spot,
-                    et les couleurs indiquent les différents clusters.
-                </p>
-            </div>
-            """
-        text2 = """
-            <div style="
-                background-color: #f0f0f0;
-                border: 2px solid #3c3c3c;
-                border-radius: 10px;
-                padding: 15px;
-                margin: 10px 0;
-                font-family: 'Helvetica', 'Arial', sans-serif;
-                font-size: 14px;
-                line-height: 1.5;
-                color: #333333;
-                box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            ">
-                <h3 style="
-                    margin-top: 0;
-                    color: #2c3e50;
-                    font-size: 18px;
-                    border-bottom: 1px solid #bdc3c7;
-                    padding-bottom: 8px;
-                ">Information sur la visualisation</h3>
-                <p style="margin-bottom: 0;">
-                    Cette vue montre la déconvolution par cluster. Les graphiques représentent
-                    la distribution des cellules dans chaque spot."
-                </p>
-            </div>
-            """
-        # Créez le widget Div
-        info_box = Div(
-            text= text1,
-            width=1000,
-            height=120
-        )
+    rmsd_plot.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
+    min_val, max_val = min(data["rmsd_value"]), max(data["rmsd_value"])
+    color_map = LinearColorMapper(palette=Viridis256, low=min_val, high=max_val)
+    for index, row in df.iterrows():
+        x, y = row['x'], row['y']
+        rmsd_value = row['rmsd_value']
+        circle_source = ColumnDataSource({
+            'x': [x],
+            'y': [y],
+            'rmsd_value': [rmsd_value]  # Add rmsd_value for color mapping
+        })
 
-        # Modifiez les callbacks des boutons pour mettre à jour le texte du Div
-        show_all_button = Button(label="Show Clusters", width=100)
-        show_all_button.js_on_click(CustomJS(args=dict(p=p, deconv_plots=deconv_plots, info_box=info_box, text1 = text1), code="""
-            p.visible = true;
+        rmsd_plot.scatter(x='x', y='y', size=7,
+                            marker="circle",
+                            fill_color=transform('rmsd_value', color_map),  # Correct color mapping
+                            line_width=0,
+                            source=circle_source,
+                            visible=True)
+
+    # Add a color bar for the color mapping
+    color_bar = ColorBar(color_mapper=color_map,
+                        label_standoff=14,
+                        location=(0, 0),
+                        title='RMSD')
+
+    # Add color bar to the plot
+    rmsd_plot.add_layout(color_bar, 'left')
+    ########
+    text1 = """
+        <div style="
+            background-color: #f0f0f0;
+            border: 2px solid #3c3c3c;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333333;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        ">
+            <h3 style="
+                margin-top: 0;
+                color: #2c3e50;
+                font-size: 18px;
+                border-bottom: 1px solid #bdc3c7;
+                padding-bottom: 8px;
+            ">Visualization Infos</h3>
+            <p style="margin-bottom: 0;">
+                This view shows the clusters. Each point represents a spot, and the colors indicate the different clusters."
+            </p>
+        </div>
+        """
+    text2 = """
+        <div style="
+            background-color: #f0f0f0;
+            border: 2px solid #3c3c3c;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333333;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        ">
+            <h3 style="
+                margin-top: 0;
+                color: #2c3e50;
+                font-size: 18px;
+                border-bottom: 1px solid #bdc3c7;
+                padding-bottom: 8px;
+            ">Visualization Infos</h3>
+            <p style="margin-bottom: 0;">
+                This visualization shows deconvolution results by cluster. In each spot, celltype proportions are represented with a pie chart"
+            </p>
+        </div>
+        """
+    text3 = """
+        <div style="
+            background-color: #f0f0f0;
+            border: 2px solid #3c3c3c;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 10px 0;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            font-size: 14px;
+            line-height: 1.5;
+            color: #333333;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        ">
+            <h3 style="
+                margin-top: 0;
+                color: #2c3e50;
+                font-size: 18px;
+                border-bottom: 1px solid #bdc3c7;
+                padding-bottom: 8px;
+            ">Visualization Infos</h3>
+            <p style="margin-bottom: 0;">
+                This visualization compares deconvolution results between different methods based on RMSD metric"
+            </p>
+        </div>
+        """
+    # Créez le widget Div
+    info_box = Div(
+        text= text1,
+        width=1000,
+        height=120
+    )
+
+    # Modifiez les callbacks des boutons pour mettre à jour le texte du Div
+    show_all_button = Button(label="Show Clusters", width=100)
+    show_all_button.js_on_click(CustomJS(args=dict(p=p,  rmsd_plot = rmsd_plot, deconv_plots=deconv_plots, info_box=info_box, text1 = text1), code="""
+        p.visible = true;
+        deconv_plots.forEach((p) => {p.visible = false});
+        rmsd_plot.visible = false;
+        info_box.text = text1;
+    """))
+    spacer = Spacer(width=50)  # Adjust the width as needed
+    button_methods = []
+    for index, method in enumerate(deconv_methods):
+        button = Button(label=f"Show deconvolution by Cluster with {method}", width=120)
+        button.js_on_click(CustomJS(args=dict(p=p,  rmsd_plot = rmsd_plot,  deconv_plots=deconv_plots, index = index, info_box=info_box, text2 = text2), code="""
+            p.visible = false;
+            rmsd_plot.visible = false;
             deconv_plots.forEach((p) => {p.visible = false});
-            info_box.text = text1;
+            deconv_plots[index].visible = true;
+            info_box.text = text2;
         """))
-        spacer = Spacer(width=50)  # Adjust the width as needed
-        button_methods = []
-        for index, method in enumerate(deconv_methods):
-          button = Button(label=f"Show deconvolution by Cluster with {method}", width=120)
-          button.js_on_click(CustomJS(args=dict(p=p, deconv_plots=deconv_plots, index = index, info_box=info_box, text2 = text2), code="""
-              p.visible = false;
-              deconv_plots.forEach((p) => {p.visible = false});
-              deconv_plots[index].visible = true;
-              info_box.text = text2;
-          """))
-          button_methods.append(button)
-          spacer1 = Spacer(width=150)  # Adjust the width as needed
-          button_methods.append(spacer1)
+        button_methods.append(button)
+        spacer1 = Spacer(width=150)  # Adjust the width as needed
+        button_methods.append(spacer1)
 
-        spacer1 = Spacer(width=100)
-        spacer2 = Spacer(width=100)
-        # Assuming you have your data in a pandas DataFrame called 'df'
-        csv_source = ColumnDataSource({'data': [df.drop(columns=[f"{method}_tooltip_data" for method in deconv_methods]).to_csv(index=False)]})
-        download_button = Button(label="Download raw data", width=100)
-        download_button.js_on_click(CustomJS(args=dict(source=csv_source), code="""
-            const data = source.data['data'][0];
-            const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.href = url;
-            link.download = "raw_data.csv";
-            link.click();
-            URL.revokeObjectURL(url);
-        """))
-        tap_tool = TapTool()
-        p.add_tools(tap_tool)
-        # Associez le callback au TapTool
-        hover = HoverTool(tooltips="""
+    rmsd_button = Button(label="RMSD", width=100)
+    rmsd_button.js_on_click(CustomJS(args=dict(p=p, rmsd_plot = rmsd_plot, deconv_plots=deconv_plots, info_box=info_box, text3 = text3), code="""
+        p.visible = false;
+        deconv_plots.forEach((p) => {p.visible = false});
+        rmsd_plot.visible = true; 
+        info_box.text = text3;
+
+    """))
+
+    spacer1 = Spacer(width=100)
+    spacer2 = Spacer(width=100)
+    spacer3 = Spacer(width=100)
+    spacer4 = Spacer(width=100)
+
+    # Assuming you have your data in a pandas DataFrame called 'df'
+    csv_source = ColumnDataSource({'data': [df.drop(columns=[f"{method}_tooltip_data" for method in deconv_methods]).to_csv(index=False)]})
+    download_button = Button(label="Download raw data", width=100)
+    download_button.js_on_click(CustomJS(args=dict(source=csv_source), code="""
+        const data = source.data['data'][0];
+        const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = "raw_data.csv";
+        link.click();
+        URL.revokeObjectURL(url);
+    """))
+    tap_tool = TapTool()
+    p.add_tools(tap_tool)
+    # Associez le callback au TapTool
+    hover = HoverTool(tooltips="""
+        <div style="width:220px">
+            @tooltip_data
+        </div>
+    """)
+    hover_list = []
+    for method in deconv_methods:
+        tooltip_string = f"""
             <div style="width:220px">
-                @tooltip_data
+                @{method}_tooltip_data
             </div>
-        """)
-        hover_list = []
-        for method in deconv_methods:
-          tooltip_string = f"""
-              <div style="width:220px">
-                  @{method}_tooltip_data
-              </div>
-          """
-          # Create the HoverTool with the constructed tooltip string
-          h = HoverTool(tooltips=tooltip_string)
-          hover_list.append(h)
-        p.add_tools(hover)
-        for index, plot in enumerate(deconv_plots):
-          plot.add_tools(hover_list[index])
-          leg_plot = plot.legend[0]
-          leg_plot.glyph_width = 0
-          plot.add_layout(leg_plot,'left')
-          plot.legend.location = "top_right"
-          plot.legend.click_policy = "hide"
-          plot.visible = False
-          plot.legend.visible = True
-        leg = p.legend[0]
-        leg.glyph_height = 40
-        leg.glyph_width = 40
-        leg.label_text_font_size = "20pt"
-        p.add_layout(leg,'left')
+        """
+        # Create the HoverTool with the constructed tooltip string
+        h = HoverTool(tooltips=tooltip_string)
+        hover_list.append(h)
+    p.add_tools(hover)
+    for index, plot in enumerate(deconv_plots):
+        plot.add_tools(hover_list[index])
+        leg_plot = plot.legend[0]
+        leg_plot.glyph_width = 0
+        plot.add_layout(leg_plot,'left')
+        plot.legend.location = "top_right"
+        plot.legend.click_policy = "hide"
+        plot.visible = False
+        plot.legend.visible = True
+    leg = p.legend[0]
+    leg.glyph_height = 40
+    leg.glyph_width = 40
+    leg.label_text_font_size = "20pt"
+    p.add_layout(leg,'left')
 
 
 
-        from bokeh.layouts import column, row # to avoid a conflict with row from pandas
-        # Créez le layout
-        buttons_row = row(show_all_button, spacer, *button_methods, download_button, spacer2, slider)
-        layout = column(buttons_row, info_box, p, *deconv_plots)
+    from bokeh.layouts import column, row # to avoid a conflict with row from pandas
+    # Créez le layout
+    buttons_row = row(show_all_button, spacer, *button_methods, spacer4,  download_button, spacer2, rmsd_button, spacer3, slider)
+    layout = column(buttons_row, info_box, p, *deconv_plots, rmsd_plot)
 
-        p.legend.location = "top_right"
-        p.legend.click_policy = "hide"
-        p.legend.visible = True
+    p.legend.location = "top_right"
+    p.legend.click_policy = "hide"
+    p.legend.visible = True
+    rmsd_plot.visible = False
 
-        if show_figure:
-            show(layout)
-        output_file(output, mode='inline')
-        save(layout)
+
+    if show_figure:
+        show(layout)
+    output_file(output, mode='inline')
+    save(layout)
 
 # <! ------------------------------------------------------------------------!>
 # <!                       BOKEH VISUALIZATION                               !>
 # <! ------------------------------------------------------------------------!>
+def post_process_data(norm_weights_filepaths, st_coords_filepath, data_clustered, deconv_methods, n_largest_cell_types, scale_factor):
+    norm_weights_dfs = [process_data(props, st_coords_filepath,data_clustered, deconv_methods[index], n_largest_cell_types, scale_factor = scale_factor)\
+                      for index, props  in enumerate(norm_weights_filepaths)]
+    processed_data = norm_weights_dfs[0]
+    for i in range(1, len(norm_weights_dfs)):
+        processed_data = pd.merge(processed_data, norm_weights_dfs[i])
+    nb_spots_samples = processed_data.shape[0]
+
+    for method in deconv_methods:
+        processed_data[f'{method}_values'] = processed_data.apply(
+            lambda row: [row[f"{method}_Deconv_cell{i}_norm_value"] for i in range(1, n_largest_cell_types + 1)],
+            axis=1
+        )
+
+    # processed_data[f'rmsd_value'] = processed_data.apply(
+    #     lambda row: rmsd_for_multiple_pairs([row[f"{method}_values"] for method in deconv_methods]),
+    #     axis=1
+    # )
+    processed_data[f'rmsd_value'] = processed_data.apply(
+        lambda row:  calculate_rmsd(row[f"rctd_values"], row[f"cell2location_values"]),
+        axis=1
+    )
+    return processed_data
+
 if __name__ == "__main__":
     import sys
     argv = sys.argv
@@ -465,11 +598,9 @@ if __name__ == "__main__":
     output_html = argv[8]
     deconv_methods = argv[9].split(',')
     print("Processing data ...\n")
-    norm_weights_dfs = [process_data(props, st_coords_filepath,data_clustered, deconv_methods[index], n_largest_cell_types, scale_factor = scale_factor)\
-                        for index, props  in enumerate(norm_weights_filepaths)]
-    processed_data = norm_weights_dfs[0]
-    for i in range(1, len(norm_weights_dfs)):
-        processed_data = pd.merge(processed_data, norm_weights_dfs[i])
+    processed_data = post_process_data(norm_weights_filepaths=norm_weights_filepaths, st_coords_filepath=st_coords_filepath, data_clustered=data_clustered, \
+                                 deconv_methods=deconv_methods, n_largest_cell_types=n_largest_cell_types, scale_factor=scale_factor)
+
     print(f"Deconvolution methods {deconv_methods}")
     print(f"Generating vis with {processed_data.shape[0]} spots and top {n_largest_cell_types} cells...\n")
     nb_spots_samples = processed_data.shape[0]

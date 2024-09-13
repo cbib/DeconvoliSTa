@@ -36,7 +36,7 @@ def lire_config_et_former_options(fichier):
     # Join all options with a space
     return ' '.join(options)
 
-gen_arguments = lire_config_et_former_options("subworkflows/data_generation/my_config.yaml")
+gen_arguments = lire_config_et_former_options("subworkflows/data_generation/config.yaml")
 
 synthspot_types_fullnames = list(synthspot_types_map.values())
 synthspot_types_flat = synthspot_types_flat = [item for sublist in synthspot_types_map.items() for item in sublist] #All key and values in a list
