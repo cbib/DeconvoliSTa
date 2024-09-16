@@ -34,7 +34,7 @@ def main():
     prs.add_argument('-t', '--tech_column', default = None, nargs='+',
                  type = str, help = "multiplicative technical effects, such as platform effects")
     # 250 1000
-    prs.add_argument('-e', '--epochs', default=250, type = int, help = "number of epochs to train the model")
+    prs.add_argument('-e', '--epochs', default=25, type = int, help = "number of epochs to train the model")
 
     prs.add_argument('-p', '--posterior_sampling', default=1000, type = int, help = "number of samples to take from the posterior distribution")
 

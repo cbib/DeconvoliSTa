@@ -23,7 +23,7 @@ deconv_args = params['deconv_args']
 script_dir = os.path.dirname(os.path.abspath(__file__))
 nnls_script = "subworkflows/deconvolution/nnls/script_nf.R"
 annot = config["annot"] if "annot" in config.keys() else params['annot']
-
+map_genes = config.get("map_genes", "false")
 rule run_nnls:
     input:
         sc_input=sc_input,
@@ -38,5 +38,5 @@ rule run_nnls:
         """
         Rscript {nnls_script} \
              --sc_input {input.sc_input} --sp_input {input.sp_input} \
-            --annot {annot} --output {output}
+            --annot {annot} --output {output} --map_genes {map_genes}
         """

@@ -10,20 +10,32 @@ with open("subworkflows/deconvolution/cell2location/config.yaml", "r") as config
 def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
-sc_input = config["sc_input"]
-sp_input = config["sp_input"]
-output_dir = config["output"]
+# Helper function to check if a config variable is present
+def get_config_var(config, var_name, default=None):
+    if var_name not in config:
+        if default is None:
+            raise ValueError(f"Error: '{var_name}' is missing in the configuration file.")
+        else:
+            print(f"Warning: '{var_name}' is missing in the configuration file. Using default: {default}")
+            return default
+    return config[var_name]
+
+# Charger les paramètres de configuration nécessaires
+sc_input = get_config_var(config, "sc_input")
+sp_input = get_config_var(config, "sp_input")
+output_dir = get_config_var(config, "output")
 output_suffix = get_basename(sp_input)
-runID_props = params["runID_props"]
+runID_props = get_config_var(params, "runID_props")
 method = "cell2location"
 formatted_output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
-use_gpu = config["use_gpu"]
-annot = config["annot"] if "annot" in config.keys() else params["annot"]
-map_genes = config.get("map_genes", "false")
+use_gpu = get_config_var(config, "use_gpu")
+annot = get_config_var(config, "annot", get_config_var(params, "annot"))
+map_genes = get_config_var(config, "map_genes", "false")
+
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
 convert_script = "subworkflows/deconvolution/convertBetweenRDSandH5AD.R"
-load_model = config.get("load_model") == 'true' 
+load_model = get_config_var(config, "load_model") == 'true'
 
 
 if not load_model:
@@ -52,8 +64,8 @@ if not load_model:
             rules.convertBetweenRDSandH5AD.output.sc_h5ad_file,
             rules.convertBetweenRDSandH5AD.output.sp_h5ad_file
         output:
-            # temp(f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad")
-            f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad"
+            temp(f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad")
+            # f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad"
         singularity:
             "docker://csangara/sp_cell2location:latest"
         threads:
@@ -66,12 +78,10 @@ if not load_model:
             elapsed_time=$((end_time - start_time))
             echo "build_cell2location took $elapsed_time seconds"
             """
-    # model_path  = f"{output_dir}/sc.h5ad"
     rule fit_cell2location:
         input:
             rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
             model= rules.build_cell2location.output
-            # model = model_path
         output:
             temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
         singularity:
@@ -108,7 +118,6 @@ else:
     rule fit_cell2location:
         input:
             rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
-            # model= rules.build_cell2location.output
             model = model_path
         output:
             temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")

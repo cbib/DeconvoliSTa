@@ -28,31 +28,31 @@ sp_input = get_config_var(config, "sp_input")
 output_dir = get_config_var(config, "output")
 output_suffix = get_basename(sp_input)
 runID_props = get_config_var(params, "runID_props")
-method = "rctd"
+method = "spatialdwls"
 output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
 deconv_args = get_config_var(params, "deconv_args")
 
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
-rctd_script = "subworkflows/deconvolution/rctd/script_nf.R"
+rctd_script = "subworkflows/deconvolution/spatialdwls/script_nf.R"
 
 annot = get_config_var(config, "annot", get_config_var(params, "annot"))
 map_genes = get_config_var(config, "map_genes", "false")
 
-rule run_rctd:
+rule run_spatialdwls:
     input:
         sc_input=sc_input,
         sp_input=sp_input
     output:
         output
     singularity:
-        "docker://abderahim02/sp_rctd:latest" #"docker://csangara/sp_rctd:latest"
+        "docker://csangara/sp_spatialdwls:latest" #"docker://csangara/sp_rctd:latest"
     threads:
         12
     shell:
         """
-        Rscript {rctd_script} \
-            --sc_input {input.sc_input} --sp_input {input.sp_input} \
-            --annot {annot} --output {output} --map_genes {map_genes} --num_cores {threads} 
+        Rscript subworkflows/deconvolution/spatialdwls/script_nf.R \
+            --sc_input {sc_input} --sp_input {sp_input} \
+            --annot {annot} --output {output}  --map_genes {map_genes}
         """
 

@@ -38,5 +38,5 @@ rule generateSyntheticData:
         reps=config['reps'],
         args= ' '.join([f"--{k} {v}" for k, v in config.items() if k not in ["dataset_type", "reps", "sc_input"]])
     shell:
-        "python3  ./subworkflows_sm/data_generation/script.py {config}"
+        "python3  ./subworkflows/data_generation/script.py {config}"
             

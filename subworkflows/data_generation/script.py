@@ -36,7 +36,7 @@ def lire_config_et_former_options(fichier):
     # Join all options with a space
     return ' '.join(options)
 
-gen_arguments = lire_config_et_former_options("subworkflows_sm/data_generation/my_config.yaml")
+gen_arguments = lire_config_et_former_options("subworkflows/data_generation/config.yaml")
 
 synthspot_types_fullnames = list(synthspot_types_map.values())
 synthspot_types_flat = synthspot_types_flat = [item for sublist in synthspot_types_map.items() for item in sublist] #All key and values in a list
@@ -55,7 +55,7 @@ def generate_synthetic_data(sc_input, dataset_type, rep, outdir, annot, args=Non
     args_str = args if args else ''
     region_var = config["region_var"] if "region_var" in config.keys()  else 'NULL' # brain_subregion
     shell_command = (
-        f"Rscript subworkflows_sm/data_generation/generate_synthetic_data.R "
+        f"Rscript subworkflows/data_generation/generate_synthetic_data.R "
         f"--sc_input {sc_input} --dataset_type {dataset_type} --rep {rep}  --clust_var {annot} --region_var {region_var} {gen_arguments}"
     )
     print(shell_command)
