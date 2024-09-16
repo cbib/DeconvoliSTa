@@ -116,9 +116,7 @@ def process_data(norm_weights_filepath, st_coords_filepath, data_clustered, deco
     # Thus, for each barcoded spot, retrieve the maximum 5 weights and create new columns
     # accordingly. Those 5 max columns will be the info shown in the hovertool
     max_weights = norm_weights_df.apply(lambda x: x.nlargest(n_largest_cell_types).index.values, axis=1)
-    # standard_devs = norm_weights_df.apply(lambda x: standard_devs(x), axis=0)
 
-    # print(max_weights)
     merged_df = pd.concat([st_coords_df, norm_weights_df], axis = 1, join = 'inner')
 
     data_with_clusters = pd.read_csv(data_clustered)
@@ -285,13 +283,18 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     test_df['tooltip_data'] = test_df.apply(lambda row: '<br>'.join( \
                                             [f"<span style='color: red;'> Spot</span> : (x = { row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"] ),\
                                             axis=1)
+    test_df['error_tooltip_data'] = test_df.apply(lambda row: '<br>'.join( \
+                                            [f"<span style='color: red;'> Spot</span> : (x = { row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"]\
+                                                + [f"<span style='color: blue;'> Cluster</span> : {row['Cluster']}"]),\
+                                            axis=1)
     # Update the data dictionary
     data = {
         'x': [y/2 for y in test_df.pxl_col_in_fullres.tolist()],
         'y': [-x/2 for x in test_df.pxl_row_in_fullres.tolist()],
         'tooltip_data': test_df['tooltip_data'].tolist(),
         'Cluster' : test_df['Cluster'].tolist() ,
-        'error_value' : test_df["error_value"].tolist()
+        'error_value' : test_df["error_value"].tolist(),
+        'error_tooltip_data': test_df['error_tooltip_data'].tolist()
     }
     # Convert dictionary to dataframe
     df = pd.DataFrame(data)
@@ -402,10 +405,12 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     for index, row in df.iterrows():
         x, y = row['x'], row['y']
         error_value = row['error_value']
+        error_tooltip_data = row["error_tooltip_data"]
         circle_source = ColumnDataSource({
             'x': [x],
             'y': [y],
-            'error_value': [error_value]  # Add rmsd_value for color mapping
+            'error_value': [error_value] , # Add rmsd_value for color mapping
+            'error_tooltip_data' : [error_tooltip_data]
         })
 
         rmsd_plot.scatter(x='x', y='y', size=5,
@@ -507,6 +512,32 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
             </p>
         </div>
         """
+    title_text = """
+        <div style="
+            background-color: #ffffff;
+            border: 3px solid #2c3e50;
+            border-radius: 15px;
+            padding: 30px;
+            margin: 20px 0;
+            font-family: 'Helvetica', 'Arial', sans-serif;
+            color: #333333;
+            text-align: center;
+            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+        ">
+            <h1 style="
+                margin-top: 0;
+                font-size: 25px;
+                color: #2c3e50;
+                letter-spacing: 1px;
+                font-weight: bold;
+            ">Spatial Transcriptomic Exploration Interface</h1>
+            <hr style="
+                width: 80px;
+                border: 2px solid #2c3e50;
+                margin: 10px auto;
+            ">
+        </div>
+        """
     # Créez le widget Div
     info_box = Div(
         text= text1,
@@ -515,7 +546,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     )
 
     # Modifiez les callbacks des boutons pour mettre à jour le texte du Div
-    show_all_button = Button(label="Show Clusters", width=100, button_type = 'danger')
+    show_all_button = Button(label="Show Clusters", width=100, button_type = 'primary')
     show_all_button.js_on_click(CustomJS(args=dict(p=p,  rmsd_plot = rmsd_plot, deconv_plots=deconv_plots, info_box=info_box, text1 = text1), code="""
         p.visible = true;
         deconv_plots.forEach((p) => {p.visible = false});
@@ -525,7 +556,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     spacer = Spacer(width=50)  # Adjust the width as needed
     button_methods = []
     for index, method in enumerate(deconv_methods):
-        button = Button(label=f"Show deconvolution by Cluster with {method}", width=150, button_type = 'danger')
+        button = Button(label=f"Show deconvolution by Cluster with {method}", width=150, button_type = 'primary')
         button.js_on_click(CustomJS(args=dict(p=p,  rmsd_plot = rmsd_plot,  deconv_plots=deconv_plots, index = index, info_box=info_box, text2 = text2), code="""
             p.visible = false;
             rmsd_plot.visible = false;
@@ -537,7 +568,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         spacer1 = Spacer(width=150)  # Adjust the width as needed
         button_methods.append(spacer1)
 
-    rmsd_button = Button(label="Compare Deconvolution Methods", width=100, button_type = 'danger')
+    rmsd_button = Button(label="Compare Deconvolution Methods", width=100, button_type = 'primary')
     rmsd_button.js_on_click(CustomJS(args=dict(p=p, rmsd_plot = rmsd_plot, deconv_plots=deconv_plots, info_box=info_box, text3 = text3), code="""
         p.visible = false;
         deconv_plots.forEach((p) => {p.visible = false});
@@ -553,7 +584,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
 
     # Assuming you have your data in a pandas DataFrame called 'df'
     csv_source = ColumnDataSource({'data': [df.drop(columns=[f"{method}_tooltip_data" for method in deconv_methods]).to_csv(index=False)]})
-    download_button = Button(label="Download raw data", width=100, button_type = 'danger')
+    download_button = Button(label="Download raw data", width=100, button_type = 'primary')
     download_button.js_on_click(CustomJS(args=dict(source=csv_source), code="""
         const data = source.data['data'][0];
         const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
@@ -572,6 +603,12 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
             @tooltip_data
         </div>
     """)
+    hover_error = HoverTool(tooltips="""
+        <div style="width:220px">
+            @error_tooltip_data
+        </div>
+    """)
+    rmsd_plot.add_tools(hover_error)
     hover_list = []
     for method in deconv_methods:
         tooltip_string = f"""
@@ -603,6 +640,11 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     leg.items = sorted_items
     p.add_layout(leg,'right')
 
+    title_box = Div(
+        text= title_text,
+        width=700,
+        height=100
+    )
 
     from bokeh.layouts import column, row
 
@@ -625,6 +667,8 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     )
 
     controls_column = column(
+        title_box,
+        Spacer(height = 60),
         info_box,
         buttons_col,
     )
