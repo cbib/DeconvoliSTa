@@ -87,8 +87,9 @@ snakemake  -s   main.smk -c8 --config \
 4. output is the output directory for generated files.
 5. region_var column with regional metadata in sc_input@meta.data, if any (for "real" dataset types).
 
+
 # Spatial Transcriptomics Visualizations
-### The pipeline include an interactive visualization tool for deconvolution results. It is an independent part of the pipeline that shows deconvolution results with proportions for each spot displayed with the actual Visium spatial image, and different deconvolution methods results can be visualized. In addition, it displays spots with clustering. The tool include also raw visualized data. A demo of this tool can be seen   [here.](run : https://drive.google.com/uc?export=download&id=1eXaHzJOT6B9YIPYDvQtTKoAs0kv8eoiX)
+### The pipeline include an interactive visualization tool for deconvolution results. It is an independent part of the pipeline that shows deconvolution results with proportions for each spot displayed with the actual Visium spatial image, and different deconvolution methods results can be visualized. In addition, it displays spots with clustering. The tool include also raw visualized data. A demo of this tool can be seen   <a href="https://drive.google.com/uc?export=download&id=1eXaHzJOT6B9YIPYDvQtTKoAs0kv8eoiX" download target="_blank" rel="noopener noreferrer">here</a>
 
 1. sp_input is the spatial data file used in deconvolution, it is used only to name the output HTML file.
 2. output is the output directory.
