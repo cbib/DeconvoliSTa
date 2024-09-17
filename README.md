@@ -91,6 +91,15 @@ snakemake  -s   main.smk -c8 --config \
 # Spatial Transcriptomics Visualizations
 ### The pipeline include an interactive visualization tool for deconvolution results. It is an independent part of the pipeline that shows deconvolution results with proportions for each spot displayed with the actual Visium spatial image, and different deconvolution methods results can be visualized. In addition, it displays spots with clustering. The tool include also raw visualized data. A demo of this tool can be seen   <a href="https://drive.google.com/uc?export=download&id=1eXaHzJOT6B9YIPYDvQtTKoAs0kv8eoiX" download target="_blank" rel="noopener noreferrer">here</a>
 
+
+```bash
+  snakemake -s  main.smk -c8 --config mode="generate_vis" \
+  sp_input="UKF243_T_ST_1_raw.rds" output="vis_output" \
+  norm_weights_filepaths="props_rctd.tsv,props_cell2location.tsv" \
+  st_coords_filepath="tissue_positions_list_243.csv" \
+  data_clustered="seurat_metadata.csv" image_path="tissue_hires.png" \
+  scale_factor='0.24414062' deconv_methods=rctd,cell2location
+```
 1. sp_input is the spatial data file used in deconvolution, it is used only to name the output HTML file.
 2. output is the output directory.
 3. norm_weights_filepaths is a list of deconvolution results files when using multiple deconvolution methods. The filenames should be comma separated without spaces in between. In addition, files should be tabulation separated values (TSV) files.
