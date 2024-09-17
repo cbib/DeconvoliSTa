@@ -1,213 +1,107 @@
-# Spotless: A benchmark pipeline for <br> spatial deconvolution tools
+# Documentation of the Spatial Transcriptomics Deconvolution Pipeline
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.8211492.svg)](https://doi.org/10.5281/zenodo.8211492)
+## Introduction
 
-This is a repository for running spatial deconvolution tools through a Nextflow pipeline, as described in [Sang-aram et al. (2023)](https://elifesciences.org/articles/88431). <br> Currently, cell2location, DestVI, DSTG, MuSiC, NNLS, RCTD, SpatialDWLS, SPOTlight, stereoscope, STRIDE, Seurat, and Tangram have been implemented. To add your own method, see [Guideline_for_adding_deconvolution_tools.md](Guideline_for_adding_deconvolution_tools.md).
+This document provides documentation for the Snakemake version of Spotless, a spatial deconvolution pipeline. The pipeline was developed during my internship at CBIB. Deconvolution can be performed using one or more of the following methods: Cell2location, RCTD, NNLS, SpatialDWLS, DDLS, Seurat, MusiC, and Dirichlet (random).
 
-**Quickstart guide**
-1. [Install NextFlow](https://www.nextflow.io/docs/latest/getstarted.html) and either [Docker](https://docs.docker.com/get-docker/) or [Singularity](https://sylabs.io/guides/3.0/user-guide/installation.html).
+## Required environment installation
 
+Here are needed utilities softwares to run the pipeline.
 
-2. Download [containers](https://hub.docker.com/u/csangara).
+### Snakemake
 
-<details> 
-<summary>Sample code</summary>
+The pipeline is implemented in Snakemake which can be installed via the tutorial available in this link [Setting up Conda and Snakemake](https://gist.github.com/RomainFeron/da9df092656dd799885b612fedc9eccd).
 
+### Singularity
 
-```
-# Method containers
-for method in cell2location destvi dstg music nnls rctd spatialdwls spotlight stereoscope stride seurat tangram
-do
-docker pull csangara/sp_${method}:latest
-done
+Almost all available methods for deconvolution are containerized and run in docker images. However, Snakemake is compatible only with Singularity. Snakemake converts the docker image to a singularity image '.sif' before using it. To install Singularity, this [tutorial](https://docs.sylabs.io/guides/3.0/user-guide/installation.html) from official documentation is useful.
 
-# Other
-docker pull csangara/sp_eval:latest # for computing performance metrics
-docker pull csangara/seuratdisk:latest # for converting between Seurat and AnnData objects internally
+### System requirements
 
-# For singularity
-singularity pull docker://csangara/${container_name}:latest
-# You might have to define path to singularity containers using the "singularity.cacheDir" directive in the config file
-```
+The CPU used to execute the pipeline is an `Intel(R) Xeon(R) CPU E5-1607 0 @ 3.00GHz` model with 4 nodes and `40 Gi` RAM. And the GPU used is `NVIDIA Quadro P6000 24GB PCIe 3.0` with Cuda driver version `535.171.04` and Cuda `12.2`.
 
+With a single cell file of 3.3 Gi, this machine couldn't run the pipeline because of an out of memory. So, think about optimizing single cell data file size or dividing it into chunks as we did for ours.
 
-</details>
+Here are some execution times for synthetic data.
 
-3. Clone this repository. Check locally that `unit-test/test_sc_data.rds` is 82.7 MB and `unit-test/test_sp_data.rds` is 290 KB. If not, manually download them [[1]](https://github.com/saeyslab/spotless-benchmark/raw/main/unit-test/test_sc_data.rds)[[2]](https://github.com/saeyslab/spotless-benchmark/raw/main/unit-test/test_sp_data.rds) into the `unit-test` folder. (This occurs when Git LFS is not installed.)
-5. Modify or create a profile in *nextflow.config*. To run the pipeline locally, modify `params.rootdir` under `profiles { local { ... } }` as the directory up to and including the reposity, e.g., `"/home/$USER/spotless-benchmark"`.
-(The other two profiles are used inside computing clusters: *prism* for a Sun Grid Engine cluster, and *hpc* for a Slurm cluster.) 
-5. While in the `spotless-benchmark/` directory:
-```
-nextflow run main.nf -profile local,docker --methods music --sc_input unit-test/test_sc_data.rds \
---sp_input unit-test/test_sp_data.rds --annot subclass
+| | 100 spots | 1000 spots | 10000 spots |
+|-|-----------|------------|-------------|
+| Cell2location | 2h 16m | 3h 55m | 3h 37m |
+| RCTD | 7m | 41m | 1h |
 
-# If singularity is installed, use -profile local,singularity
-```
+## Pipeline running
 
-This runs MuSiC as a test. If this works, you should see the proportions and metrics inside `deconv_proportions/` and `results/` respectively (these directories can be changed under `params.outdir`).
+Here is how to run the pipeline.
 
-To run more methods, type the method names separated with a comma but no spaces, e.g., `--methods rctd,music`. To adjust method parameters, see `subworkflows/deconvolution/README.md`.
+### Running parameters
 
-‼**WARNING:** Do not run multiple methods simultaneously on your local computer, please only do so on a cluster!
+The pipeline inputs are as following. First, `sc_input` the singleCell reference file and `sp_input` the spatial transcriptomic file. The two files should be in RDS formats. The singleCell file should have a column for annotation in its `meta.data` attribute. These annotations will be used as cell types for the deconvolution.  Its is recommended to verify existence of this column before running the pipeline. If the single cell file is too big (> 3 Go), it is recommended to reduce its size be removing some unnecessary data for deconvolution, for example deleting unused `annotation_level` in case of multiple `annotation_levels`. Or, chunking the file into equal cell proportions subsamples.
 
-## Running the pipeline
-**Input:**
-- Single-cell reference dataset: a Seurat (.rds) or Anndata (.h5ad) object containing cell type annotations in the object metadata
-- Spatial dataset: a Seurat (.rds) object, Anndata (.h5ad) object, or named list of counts (see [Synthspot object structure](#synthspot-object-structure)) 
+Spatial and single cell files should have the same gene barcoding type, if it is not the case, a mapping should be done between gene names for the two files to homogenize gene names.
 
-**Output:**
-- A spot $\times$ cell type proportion matrix (tab-separated file) 
-- Evaluation metrics (only if synthetic data follows the synthspot object structure)
+Here's an example of the command line to run the pipeline:
 
-You can run the pipeline (`main.nf`) in three modes, `run_dataset` (the default mode, runs deconvolution tools on your own dataset), `generate_and_run` (generates synthetic datasets from your scRNA-seq data and benchmarks it), and `run_standard` (for reproducing our analysis with gold/silver standards).
-### *run_dataset*: running/benchmarking deconvolution tools on your own dataset
-The `run_dataset` mode requires a single-cell object (`params.sc_input`), the path to the spatial dataset(s) (`params.sp_input`), and the cell type annotation column (`params.annot`, default: celltype). For real data, use the `skip_metrics` flag to skip the evaluation step.
-```
-nextflow run main.nf -profile <profile_name> --mode run_dataset --sc_input <PATH_TO_SC_FILE> --sp_input <PATH_TO_SP_FILE> \
---annot <ANNOT_COL> --methods <METHODS> --skip_metrics
-```
-We can also run the standards in this way.
-```
-nextflow run main.nf -profile <profile_name> --mode run_dataset --sp_input "standards/gold_standard_1/*.rds" \
---sc_input standards/reference/gold_standard_1.rds --annot celltype --methods <METHODS>
-```
-‼ Don't forget to put any directories with [glob patterns](https://www.malikbrowne.com/blog/a-beginners-guide-glob-patterns) in quotes.
-
-‼ Metric calculation is only possible with an rds file following the [Synthspot object structure](#synthspot-object-structure) (see `unit-test/test_sp_data.rds`).
-
-### *generate_and_run*: generating and benchmarking your own synthetic datasets
-`generate_and_run` takes two single-cell objects, one to generate the synthetic data (`params.synthspot.sc_input`) and one to use as input in deconvolution methods (`params.sc_input`). It uses our *synthspot* tool to generate synthetic data by running `subworkflows/data_generation/generate_data.nf`. Synthetic datasets will be copied to `params.outdir.synthspot`. You can generate the data only or run the whole pipeline immediately after.
-```
-# Only generate data
-nextflow run subworkflows/data_generation/generate_data.nf -profile <profile_name> -params-file conf/synthspot.yaml
-
-# Generate and run the whole pipeline
-nextflow run main.nf -profile <profile_name> --mode generate_and_run --sc_input standards/reference/silver_standard_1.rds \
--params-file conf/synthspot.yaml --methods <METHODS>
-```
-The arguments to synthspot are best provided in a separate yaml/JSON file. Check out `conf/synthspot.yaml` for a detailed description of arguments. Minimally, you need four arguments:
-```
-# conf/synthspot.yaml
-synthspot:
-  sc_input: standards/reference/silver_standard_1.rds             # single-cell reference input
-  clust_var: celltype                                             # name of metadata column with cell type annotation
-  reps: 3                                                         # number of replicates per dataset type (abundance pattern)
-  type: artificial_diverse_distinct,artificial_uniform_distinct   # dataset types
-```
-This will return 3 replicates for each dataset type, resulting in 6 files. You can also adjust other parameters such as the number of spots and mean or standard deviation per spot. Note that in this example, the same file was used to generate synthetic data and to integrate with deconvolution methods. In our benchmark we use different files for this (akin to the training and test datasets in machine learning).
-
-### *run_standard*: reproducing our analysis
-Download and extract `standards.tar.gz` from [Zenodo](https://zenodo.org/record/8211492).
-```
-cd spotless-benchmark
-wget https://zenodo.org/record/8211492/files/standards.tar.gz?download=1 -O standards.tar.gz
-tar -xvzf standards.tar.gz 
-```
-Then run the pipeline with the `run_standard` mode.
-```
-nextflow run main.nf -profile <profile_name> --mode run_standard --standard <standard_name> -c standards/standard.config \
---methods <METHODS>
-```
-All folder names (except `reference`) can be used as the *standard_name*. For instance, to run the gold standard of seqFISH+ cortex dataset or the brain cortex silver standard, you would do
-```
-nextflow run main.nf -profile <profile_name> --mode run_standard --standard gold_standard_1 -c standards/standard.config
-nextflow run main.nf -profile <profile_name> --mode run_standard --standard silver_standard_1-1 -c standards/standard.config
+```bash
+snakemake  -s   main.smk -c8 --config \
+    mode="run_dataset"  methods=cell2location,rctd \
+    sc_input="test_sc_data.rds" sp_input="test_sp_data.rds" \
+    output="res" use_gpu="true" skip_metrics="true" \
+    annot="subclass" map_genes="false" load_model="true" \
+    model_path="mod" --use-singularity \
+    --singularity-args '\--nv'
 ```
 
-### Running the liver dataset
-Download and extract `liver_dataset.tar.gz` from [Zenodo](https://zenodo.org/record/8211492). `liver_README.txt` contains a description of the files. You could run the analysis by using `--mode run_dataset`, but we also provide the `conf/liver_mouse_visium.config` file which contains the parameters we used for each method as well as an additional argument (`ref_type`) you could add to automatically select a certain reference dataset. (You will however have to replace the base directories of `sc_input` and `sp_input` in this config file.) The following code snippet uses the Nuc-seq dataset for deconvolution:
+
+1. The number of cores to use for Snakemake is specified with -c8, the parameters for Snakemake are specified in a dictionary named config.
+
+2. methods is the list of methods to run, pay attention to separate them with a comma without spaces.
+
+3. output is the directory where output files will be.
+
+4. use_gpu is a parameter to use a GPU running. By default, the CPU is used.
+
+5. if skip_metrics is set to true, benchmarking metrics are not performed, for instance correlation, RMSE , accuracy, balanced accuracy, sensitivity. If you do want to measure them you should have a data frame of deconvolution ground truth in the $relative_spot_composition attribute in the spatial data input sp_input. The default value of this parameter is false.
+
+6. annot is the name of annotation column in the single cell input metadata. Pay attention to verify that it is a valid column name before running. In addition, this attribute should be a char vector not a factor. The default value of this parameter is subclass.
+
+7. map_genes should be set to true if the gene names in the single cell and spatial data inputs are not in the same gene symbols format. The default value of this parameter is false.
+8. ---use-singularity and ---singularity-args '---nv' to enable singularity use and GPU access for Snakemake.
+
+9. When load_model is true, the cell2location model doesn't do the build stage in the pipeline, instead it is loaded from model_path. When having multiple spatial samples associated with the same single cell reference dataset, this feature allows to do the build of cell2location model once and do the predictions for all spatial samples without rebuilding the model each time.
+
+# Synthetic data generation with Synthspot
+## With the pipeline, you can generate synthetic spatial data. Taking a single cell data input, Synthspot generate different synthetic spatial profiles. The generated datasets types include a variety of synthetic and real-world data configurations designed to capture different spatial and cell type distributions.
+
+## The listing below shows an example of line command to generate an artificial dataset from golden standard dataset provided by spotless.
+
+```bash
+  snakemake -s  main.smk -c12 --config mode="generate_data" \
+      sc_input="standards/reference/gold_standard_1.rds" \
+      dataset_type="aud" reps=1  output="synthetic_data_sm" \
+      region_var="celltype_coarse" --use-singularity
 
 ```
-nextflow run main.nf -profile hpc --mode run_dataset --methods rctd -c conf/liver_mouse_visium.config \
---ref_type nuclei  # options: nuclei, inVivo, exVivo, noEC, 9celltypes \
---annot annot_cd45 # options: annot, annot_fine, annot_cd45 \
---file_type rds    # options: rds, h5ad \
-#--gpu
-```
-Note that it is much more efficient to directly use the appropriate file types (rds/h5ad) rather than using the internal conversion. Therefore, it is best to run R and Python methods separately.
+1. sc_input is the single cell input file used to generate synthetic data.
+2. dataset_type is the dataset profile to generate. This parameter is a one or a comma separated list of types mapped in the listing below.
+3. rep is the number of replicates generated for the generated dataset types selected. The output will be $N_{types}\times rep$ files indexed with suffix {type}_{rep}.rds.
+4. output is the output directory for generated files.
+5. region_var column with regional metadata in sc_input@meta.data, if any (for "real" dataset types).
 
-## Pipeline arguments (Advanced use)
-You can find the default arguments of the pipeline in the `nextflow.config` file, under the `params` scope. These can be overwritten by parameters provided in the command line or in an external JSON/YAML file (see exact priorities [here](https://www.nextflow.io/docs/latest/config.html)).
-* `methods`: deconvolution methods to run in the pipeline, must be comma-separated with no space, e.g.,  <br /> `--methods music,rctd` (case-insensitive, default: all)
-* `mode`: as explained above, the different modes in which the pipeline can be run (run_standard, run_dataset, generate_and_run)
-* `annot`: the cell type annotation column in the input scRNA-seq Seurat object (default: celltype)
-* `outdir`: location to save the proportions, metrics, and synthetic data (default: `deconv_proportions/`, `results/`, `synthetic_data/`). Best to define this under your profiles.
-* `sampleID`: the column containing batch information for the input scRNA-seq Seurat object (default: none) 
-* `deconv_args`: extra parameters to pass onto deconvolution algorithms (default: []). For a more detailed explanation and list of parameters for each method, see `subworkflows/deconvolution/README.md`.
-* `synthspot`: synthspot arguments, see `subworkflows/synthspot.yaml`
-* `gpu`: add this flag to use host GPU, see below
-* `verbose`: add this flag to print input files
-* `skip_metrics`: add this flag to skip the final step which calculates evaluation metrics
-* `runID_props`, `runID_metrics`: a suffix added to the proportions and metrics file output by the pipeline
-* `remap_annot`: if you want to use another celltype annotation to calculate the metrics, see below
+# Spatial Transcriptomics Visualizations
+### The pipeline include an interactive visualization tool for deconvolution results. It is an independent part of the pipeline that shows deconvolution results with proportions for each spot displayed with the actual Visium spatial image, and different deconvolution methods results can be visualized. In addition, it displays spots with clustering. The tool include also raw visualized data. A demo of this tool can be seen   [here.](run : https://drive.google.com/uc?export=download&id=1eXaHzJOT6B9YIPYDvQtTKoAs0kv8eoiX)
 
-### GPU usage
-Stereoscope, cell2location, DestVI, and Tangram can make use of a GPU to shorten their runtimes. You can do this by providing the `--gpu` flag when running the pipeline. If you have a specific GPU you want to use, you will have to provide the index with `cuda_device` (default: 0). This works from inside the containers, so you still do not have to install the programs locally. However, the containers were built on top of a [NVIDIA base image](https://hub.docker.com/r/nvidia/cuda) with CUDA version 10.2, so your GPU must be compatible with this CUDA version.
-```
-nextflow run main.nf -profile <profile_name> --mode run_standard --standard gold_standard_1 \
--c standards/standard.config --methods stereoscope,cell2location --gpu #--cuda_device 1
-```
+1. sp_input is the spatial data file used in deconvolution, it is used only to name the output HTML file.
+2. output is the output directory.
+3. norm_weights_filepaths is a list of deconvolution results files when using multiple deconvolution methods. The filenames should be comma separated without spaces in between. In addition, files should be tabulation separated values (TSV) files.
+4. st_coords_filepath is a CSV file having the spots as index and their correspondent pixel positions in the Visium image, in pxl_col_in_fullres and pxl_row_in_fullres columns. The file should have six columns as shown in the example below. The preprocessing of data add columns names in_tissue, array_row, array_col, pxl_row_in_fullres, pxl_col_in_fullres.
 
-## Running selected parts of the pipeline
-It is also possible to only run a subworkflow instead of the whole pipeline.
+| Spot | in_tissue | array_row | array_col | pxl_row_in_fullres | pxl_col_in_fullres |
+|------|-----------|-----------|-----------|---------------------|---------------------|
+| ACGCCTGACACGCGCT-1 | 0 | 0 | 0 | 721 | 1375 |
+| TACCGATCCAACACTT-1 | 0 | 1 | 1 | 796 | 1418 |
+| ATTAAAGCGGACGAGC-1 | 0 | 0 | 2 | 721 | 1461 |
 
-### Generating synthspot data
-See __*generate_and_run*: generating and benchmarking your own synthetic datasets__.
-
-Briefly, running the following code will save an rds file to `params.outdir.synthspot`:
-```
-nextflow run subworkflows/data_generation/generate_data.nf -profile <profile_name> -params-file conf/synthspot.yaml
-```
-
-#### Synthspot object structure
-The output of synthspot is a named list of matrices and lists. There are three necessary components:
-1) **counts**: a gene $\times$ spot count matrix (preferably raw counts)
-2) **relative_spot_composition**: a spot $\times$ cell types relative proportion matrix
-
-You can look at any of the files in `standards/silver_standard` for a better idea.
-
-### Running methods
-```
-nextflow run subworkflows/deconvolution/run_methods.nf -profile <profile_name> \
---sc_input <scRNAseq_dataset> --sp_input <spatial_dataset> --annot <celltype annotation column> \
---methods <METHODS>
-```
-By default, all methods are run (equivalent to giving an argument `--methods music,rctd,spatialdwls,spotlight,stereoscope,cell2location,destvi,dstg,tangram,seurat,stride`). To run only certain methods, make sure the values are comma-separated without any spaces.
-
-### Computing metrics
-It is possible to add more metrics in the `subworkflows/evaluation/metrics.R` yourself, then recalculate the metrics without running the entire pipeline. You have to provide the ground truth datasets with the synthspot object structure (`params.sp_input`), and the script will look for the proportions at `params.outdir.props`.
-```
-nextflow run subworkflows/evaluation/evaluate_methods.nf -profile <profile_name> \
-  --sp_input "standards/gold_standard_1/*.rds"
-```
-
-### Remapping cell type annotations
-You can sum up the proportions of closely related cell types together to see if the methods perform better with a broader annotation. You can do this by creating a tsv file that maps one cell type to another (see `standards/gold_standard_1/conversion.tsv` for an example). The deconvolution will still be performed with the original annotations, but the proportions will be summed during metrics calculation. You have to provide the absolute file path with the `remap_annot` parameter. 
-```
-nextflow run main.nf -profile <profile_name> --mode run_standard --standard gold_standard_1 \
--c standards/standard.config --remap_annot /home/$USER/spotless-benchmark/standards/gold_standard_1/conversion.tsv
-
-# Only rerun the calculations - add file suffix to not overwrite existing metrics file
-nextflow run subworkflows/evaluation/evaluate_methods.nf -profile <profile_name> \
-  --sp_input "standards/gold_standard_1/*.rds" --runID_metrics "_coarse" \
-  --remap_annot /home/$USER/spotless-benchmark/standards/gold_standard_1/conversion.tsv 
-```
-
-### Converting between Seurat/AnnData (rds/h5ad) objects
-The workflow detects whether the input file is of rds or h5ad format and converts the file to its counterpart. Use `params.convert_input` to indicate the  file(s) to be converted. In case of multiple files, they cannot be from different folders.
-```
-nextflow run subworkflows/helper_processes.nf -entry convertWorkflow -profile <profile_name> \
---convert_input "standards/silver_standard_2-1/*.rds"
-```
-
-## Platforms
-The workflow has been tested on the following platforms:
-- Local: NextFlow 21.04.3 on Windows Subsystem for Linux (WSL2, Ubuntu 20.04), with Docker Desktop for Windows 4.1.0
-- Local: Nextflow 21.10.6 on CentOS 8, with Docker 20.10.14
-- SGE cluster: NextFlow 20.10.3 on CentOS 7, with Singularity 3.8.1 
-- Slurm cluster: NextFlow 21.03.0 on CentOS 7, with Singularity 3.8.5 (and NVIDIA Volta V100 GPUs)
-
-## Citation
-If you used our pipeline in your publication, please cite:
-
-Sang-Aram, C., Browaeys, R., Seurinck, R., & Saeys, Y. (2024). Spotless, a reproducible pipeline for benchmarking cell type deconvolution in spatial transcriptomics. Elife, 12, RP88431. https://doi.org/10.7554/eLife.88431.3
+5. data_clustered is another CSV file which associate every spot to its cluster using a column named BayesSpace.
+6. image_path is he path to Visium image of the sample.
+7. scale_factor is the scaling factor to use in order to match pixels coordinates with the Visium image.
+8. deconv_methods is a list of deconvolution methods used in the norm_weights_filepaths files.
