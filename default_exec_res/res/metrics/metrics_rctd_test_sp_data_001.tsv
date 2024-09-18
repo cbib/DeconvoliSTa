@@ -1,2 +1,0 @@
-"corr" "RMSE" "accuracy" "balanced_accuracy" "sensitivity" "specificity" "precision" "F1" "F2" "prc" "roc" "jsd"
-0.9230648491102 0.036054807672168 0.924 0.952 1 0.904 0.731 0.845 0.931 0.968462821161166 0.993916726748378 0.0637480905339984
