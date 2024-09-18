@@ -452,7 +452,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
             ">Visualization Infos</h3>
             <p style="margin-bottom: 0;">
                 This view shows the clusters. Each point represents a spot,
-                    and the colors indicate the different clusters."
+                    and the colors indicate the different clusters.
             </p>
         </div>
         """
@@ -477,8 +477,8 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
                 padding-bottom: 8px;
             ">Visualization Infos</h3>
             <p style="margin-bottom: 0;">
-                This visualization shows deconvolution results by cluster. 
-                In each spot, celltype proportions are represented with a pie chart"
+                This visualization shows deconvolution results by cluster.
+                In each spot, celltype proportions are represented with a pie chart
             </p>
         </div>
         """
@@ -503,12 +503,12 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
                 padding-bottom: 8px;
             ">Visualization Infos</h3>
             <p style="margin-bottom: 0;">
-                This visualization compares deconvolution results between different methods. 
-                When having 2 methods the comparing is based on RMSD metric. However, when 
-                using more than 2 methods, for each spot, and for each celltype, standard 
+                This visualization compares deconvolution results between different methods.
+                When having 2 methods the comparing is based on RMSD metric. However, when
+                using more than 2 methods, for each spot, and for each celltype, standard
                 deviation of deconvolution values among methods is calculated, then the final
                 error value for that spot is the standard deviation of calculated standard
-                    deviations among celltypes"
+                    deviations among celltypes
             </p>
         </div>
         """
@@ -530,7 +530,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
                 color: #2c3e50;
                 letter-spacing: 1px;
                 font-weight: bold;
-            ">Spatial Transcriptomic Exploration Interface</h1>
+            ">Spatial Transcriptomics Deconvolution Exploration  Interface</h1>
             <hr style="
                 width: 80px;
                 border: 2px solid #2c3e50;
@@ -572,7 +572,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     rmsd_button.js_on_click(CustomJS(args=dict(p=p, rmsd_plot = rmsd_plot, deconv_plots=deconv_plots, info_box=info_box, text3 = text3), code="""
         p.visible = false;
         deconv_plots.forEach((p) => {p.visible = false});
-        rmsd_plot.visible = true; 
+        rmsd_plot.visible = true;
         info_box.text = text3;
 
     """))
@@ -656,14 +656,14 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
 
     # Set size for each plot in 'deconv_plots'
     for plot in deconv_plots:
-        plot.width = 900 
-        plot.height = 700  
+        plot.width = 900
+        plot.height = 700
 
     # Create the row for the buttons and slider
     buttons_col = column(
         show_all_button, *button_methods,
         rmsd_button, download_button , slider,
-        Spacer(height=20)  
+        Spacer(height=20)
     )
 
     controls_column = column(
@@ -673,13 +673,13 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         buttons_col,
     )
     plots_column = column(
-        p,            
-        *deconv_plots, 
+        p,
+        *deconv_plots,
         rmsd_plot,
     )
     layout = row(
-        controls_column,  
-        plots_column,    
+        controls_column,
+        plots_column,
         sizing_mode='stretch_both'  # Stretch both components to fit the available space
     )
 
@@ -692,7 +692,6 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         show(layout)
     output_file(output, mode='inline')
     save(layout)
-
 
 # <! ------------------------------------------------------------------------!>
 # <!                       BOKEH VISUALIZATION                               !>
