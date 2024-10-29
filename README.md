@@ -1,4 +1,4 @@
-# Documentation of the Spatial Transcriptomics Deconvolution Pipeline
+#  DeconvolisSTa *Deconvol*ut*i*on of *S*patial *T*ranscriptomics d*A*ta
 
 ## Introduction
 
