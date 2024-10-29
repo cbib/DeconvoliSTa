@@ -1,4 +1,4 @@
-#  DeconvolisSTa *Deconvol*ut*i*on of *S*patial *T*ranscriptomics d*A*ta
+#  DeconvolisSTa **Deconvol**ut**i**on of **S**patial **T**ranscriptomics d**A**ta
 
 ## Introduction
 
