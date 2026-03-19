@@ -107,8 +107,7 @@ rule all:
         formatted_output="formatted_output.tsv"
 ```
 
-This setup provides a general framework for integrating deconvolution tools using Snakemake and Makefiles, allowing for modular and scalable workflow management. Adjust paths and names as necessary to fit your specific project structure.
-This conversion involves defining rules in rules.mk, creating appropriate tasks in the Snakefile, and utilizing make-like dependencies within Snakemake's Python-based rule definitions. You may need additional adjustments based on your exact environment and requirements.
+
 
 
 
