@@ -113,15 +113,3 @@ This conversion involves defining rules in rules.mk, creating appropriate tasks 
 
 
 
-
-
-Applying
-Ctrl ⌫ Cancel
-
-
-
-Agent
-
-microsoft/phi-4
-Ctrl⏎ Active file
-⏎ Enter
