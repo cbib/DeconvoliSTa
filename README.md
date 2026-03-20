@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document provides documentation for the Snakemake version of Spotless, a spatial deconvolution pipeline. The pipeline was developed during my internship at CBIB. Deconvolution can be performed using one or more of the following methods: Cell2location, RCTD, NNLS, SpatialDWLS, DDLS, Seurat, MusiC, and Dirichlet (random).
+This document provides documentation for the Snakemake version of Spotless, a spatial deconvolution pipeline. The pipeline was developed by A. Lagraoui, M. Arrieta and S.Karkar et CBIB, Université de Bordeaux, France. Deconvolution can be performed using one or more of the following methods: Cell2location, RCTD, NNLS, SpatialDWLS, DDLS, Seurat, MusiC, and Dirichlet (random).
 
 ## Required environment installation
 
@@ -31,9 +31,27 @@ Here are some execution times for synthetic data.
 
 ## Pipeline running
 
-Here is how to run the pipeline.
+### Documentation for each mode
+   - [run_dataset](/docs/run_dataset.md)  
+   - [generate_data](/docs/generate_data.md)  
+   - [generate_vis](/docs/generate_vis.md)
 
-### Running parameters
+
+
+## Common Optional Parameters
+
+| Parameter | Default | Effect |
+|-----------|---------|--------|
+| `use_gpu` | `"false"` | Enables GPU acceleration for supported methods (requires Singularity + CUDA). |
+| `annot` | `"subclass"` | Column name in the single‑cell metadata that contains cell‑type annotations. |
+| `map_genes` | `"false"` | Set to `"true"` if gene names differ between scRNA and spatial data. |
+| `load_model` | `"false"` | If `"true"`, Cell2location skips the model‑building step and loads a pre‑trained model from `model_path`. |
+| `model_path` | – | Path to a pre‑built Cell2location model (used only when `load_model=true`). |
+
+---
+
+
+### Common parameters
 
 The pipeline inputs are as following. First, `sc_input` the singleCell reference file and `sp_input` the spatial transcriptomic file. The two files should be in RDS formats. The singleCell file should have a column for annotation in its `meta.data` attribute. These annotations will be used as cell types for the deconvolution.  Its is recommended to verify existence of this column before running the pipeline. If the single cell file is too big (> 3 Go), it is recommended to reduce its size be removing some unnecessary data for deconvolution, for example deleting unused `annotation_level` in case of multiple `annotation_levels`. Or, chunking the file into equal cell proportions subsamples.
 
@@ -69,10 +87,10 @@ snakemake  -s   main.smk -c8 --config \
 
 9. When load_model is true, the cell2location model doesn't do the build stage in the pipeline, instead it is loaded from model_path. When having multiple spatial samples associated with the same single cell reference dataset, this feature allows to do the build of cell2location model once and do the predictions for all spatial samples without rebuilding the model each time.
 
-# Synthetic data generation with Synthspot
-## With the pipeline, you can generate synthetic spatial data. Taking a single cell data input, Synthspot generate different synthetic spatial profiles. The generated datasets types include a variety of synthetic and real-world data configurations designed to capture different spatial and cell type distributions.
+## Synthetic data generation with Synthspot
+ With the pipeline, you can generate synthetic spatial data. Taking a single cell data input, Synthspot generate different synthetic spatial profiles. The generated datasets types include a variety of synthetic and real-world data configurations designed to capture different spatial and cell type distributions.
 
-## The listing below shows an example of line command to generate an artificial dataset from golden standard dataset provided by spotless.
+The listing below shows an example of line command to generate an artificial dataset from golden standard dataset provided by spotless.
 
 ```bash
   snakemake -s  main.smk -c12 --config mode="generate_data" \
@@ -88,8 +106,8 @@ snakemake  -s   main.smk -c8 --config \
 5. region_var column with regional metadata in sc_input@meta.data, if any (for "real" dataset types).
 
 
-# Spatial Transcriptomics Visualizations
-### The pipeline include an interactive visualization tool for deconvolution results. It is an independent part of the pipeline that shows deconvolution results with proportions for each spot displayed with the actual Visium spatial image, and different deconvolution methods results can be visualized. In addition, it displays spots with clustering. The tool include also raw visualized data. A demo of this tool can be seen   <a href="https://drive.google.com/uc?export=download&id=1eXaHzJOT6B9YIPYDvQtTKoAs0kv8eoiX" download target="_blank" rel="noopener noreferrer">here</a>
+## Spatial Transcriptomics 
+The pipeline include an interactive visualization tool for deconvolution results. It is an independent part of the pipeline that shows deconvolution results with proportions for each spot displayed with the actual Visium spatial image, and different deconvolution methods results can be visualized. In addition, it displays spots with clustering. The tool include also raw visualized data. A demo of this tool can be seen   <a href="https://slim-karkar.emi.u-bordeaux.fr/deconvolista/visium_plot_sample1.html" download target="_blank" rel="noopener noreferrer">here</a>
 
 
 ```bash

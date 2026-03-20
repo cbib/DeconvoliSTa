@@ -1,0 +1,15 @@
+# This is an example configuration file
+# To learn more, see the full config.yaml reference: https://docs.continue.dev/reference
+
+name: Example Config
+version: 1.0.0
+schema: v1
+
+# Define which models can be used
+# https://docs.continue.dev/customization/models
+models:
+  - name: my lm
+    provider: lmstudio
+    model: AUTODETECT
+    apiBase: http://10.71.0.32:1234/v1/
+    apiKey: dummykey  
