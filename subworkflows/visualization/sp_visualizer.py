@@ -274,161 +274,129 @@ import math
 
     
    
-def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_spots_samples, output , show_legend = False, show_figure = False ):
+def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_spots_samples, n_largest_cell_types, output, show_legend=False, show_figure=False):
+    from bokeh.models import LinearColorMapper, ColorBar
+    from bokeh.palettes import Viridis256
+
     image_display_infos = get_image_display_infos(image_path)
     image_display_infos = {x: int(np.ceil(image_display_infos[x]/2)) if x != "image_path" else image_display_infos[x] for x in image_display_infos}
-    # Smaller sample
-    test_df = reduced_df[reduced_df["in_tissue"] == 1].head(nb_spots_samples).copy()
-    # Create a single tooltip column for each circle
-    test_df['tooltip_data'] = test_df.apply(lambda row: '<br>'.join( \
-                                            [f"<span style='color: red;'> Spot</span> : (x = { row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"] ),\
-                                            axis=1)
-    test_df['error_tooltip_data'] = test_df.apply(lambda row: '<br>'.join( \
-                                            [f"<span style='color: red;'> Spot</span> : (x = { row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"]\
-                                                + [f"<span style='color: blue;'> Cluster</span> : {row['Cluster']}"]),\
-                                            axis=1)
-    # Update the data dictionary
-    data = {
-        'x': [y/2 for y in test_df.pxl_col_in_fullres.tolist()],
-        'y': [-x/2 for x in test_df.pxl_row_in_fullres.tolist()],
-        'tooltip_data': test_df['tooltip_data'].tolist(),
-        'Cluster' : test_df['Cluster'].tolist() ,
-        'error_value' : test_df["error_value"].tolist(),
-        'error_tooltip_data': test_df['error_tooltip_data'].tolist()
-    }
-    # Convert dictionary to dataframe
-    df = pd.DataFrame(data)
-    # Initialize the Bokeh plot
-    p = figure(width = image_display_infos.get("im_w"), height = image_display_infos.get("im_h"),
-                title = "Clustering results",
-                x_axis_label = 'x',
-                y_axis_label = 'y',
-                output_backend="webgl"
-                )
-    # Add the image with a ColumnDataSource
+
+    test_df = reduced_df[reduced_df["in_tissue"] == 1].head(nb_spots_samples).copy().reset_index(drop=True)
+    n_spots = len(test_df)
+
+    all_x = [y/2 for y in test_df.pxl_col_in_fullres.tolist()]
+    all_y = [-x/2 for x in test_df.pxl_row_in_fullres.tolist()]
+
+    test_df['tooltip_data'] = test_df.apply(
+        lambda row: f"<span style='color: red;'> Spot</span> : (x = {row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})",
+        axis=1)
+    test_df['error_tooltip_data'] = test_df.apply(
+        lambda row: (f"<span style='color: red;'> Spot</span> : (x = {row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})<br>"
+                     f"<span style='color: blue;'> Cluster</span> : {row['Cluster']}"),
+        axis=1)
+
+    # Shared image source (one object, reused across all plots)
     image_source = ColumnDataSource(data=dict(
-        url=[ image_to_base64(image_display_infos.get("image_path"))],
-        x=[ image_display_infos.get("x0") ],
-        y=[ image_display_infos.get("y0") ],
-        w=[image_display_infos.get("im_w") ],
-        h=[ image_display_infos.get("im_h") ],
-        alpha=[1.0]  # Initial alpha value
+        url=[image_to_base64(image_display_infos.get("image_path"))],
+        x=[image_display_infos.get("x0")],
+        y=[image_display_infos.get("y0")],
+        w=[image_display_infos.get("im_w")],
+        h=[image_display_infos.get("im_h")],
+        alpha=[1.0]
     ))
-    image = p.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
-    # Create a slider for image transparency
+
     slider = Slider(start=0, end=1, value=1, step=.1, title="Image Transparency")
-    # Create a callback to update the image alpha
-    callback = CustomJS(args=dict(image_source=image_source), code="""
+    slider.js_on_change('value', CustomJS(args=dict(image_source=image_source), code="""
         var alpha = cb_obj.value;
         image_source.data['alpha'] = [alpha];
         image_source.change.emit();
-    """)
+    """))
 
-    slider.js_on_change('value', callback)
-    # Create a dictionary to store scatter renderers
-    scatter_renderers = {}
-    # Group the dataframe by cluster
-    grouped = df.groupby('Cluster')
-    # Plot each cluster separately
-    for cluster, group in grouped:
+    # --- Cluster plot (one scatter renderer per cluster, already O(n_clusters)) ---
+    p = figure(width=900, height=700, title="Clustering results",
+               x_axis_label='x', y_axis_label='y', output_backend="webgl")
+    p.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
+
+    cluster_source_df = pd.DataFrame({
+        'x': all_x, 'y': all_y,
+        'Cluster': test_df['Cluster'].tolist(),
+        'tooltip_data': test_df['tooltip_data'].tolist()
+    })
+    for cluster, group in cluster_source_df.groupby('Cluster'):
         color = clusters_colordict.get(cluster, '#000000')
-        source = ColumnDataSource(group)
+        p.scatter(x='x', y='y', size=5, marker="circle", fill_color=color,
+                  line_width=0, source=ColumnDataSource(group),
+                  legend_label=f"Cluster {int(cluster)}")
+    p.add_tools(HoverTool(tooltips="<div style='width:220px'>@tooltip_data</div>"))
 
-        scatter = p.scatter(x='x', y='y', size=5,
-                            marker="circle",  # Specify the marker shape
-                            fill_color=color
-                            , line_width=0,
-                            source=source,
-                            legend_label=f"Cluster {int(cluster)}")
-        scatter_renderers[cluster] = scatter
+    # --- Deconv plots: vectorized — 1 source per method, n_largest_cell_types renderers ---
+    # Replaces the previous n_spots × n_cell_types individual sources/renderers loop.
+    deconv_plots = []
     for method in deconv_methods:
-        # Create a single tooltip column for each circle
         test_df[f"{method}_tooltip_data"] = test_df.apply(lambda row: '<br>'.join([
             f"<div style='display:flex;align-items:center;'>"
             f"<div style='width:10px;height:10px;background-color:{colordict.get(row[f'{method}_Deconv_cell{i+1}'], '#000000')};margin-right:5px;'></div>"
             f"<span style='color: blue;'>{row[f'{method}_Deconv_cell{i+1}']}</span>: {row[f'{method}_Deconv_cell{i+1}_norm_value']*100:.2f}%"
             f"</div>"
             for i in range(n_largest_cell_types)
-        ] +  [f"<span style='color: red;'> Spot</span> : (x = {row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"]), axis=1)
-        data[f"{method}_tooltip_data"] = test_df[f"{method}_tooltip_data"].tolist()
-        for i in range(1, n_largest_cell_types + 1):
-            data[f'{method}_DeconvCell{i}'] = test_df[f'{method}_Deconv_cell{i}'].tolist()
-            data[f'{method}_DeconvCell{i}_w'] = test_df[f'{method}_Deconv_cell{i}_norm_value'].tolist()
-    # Convert dictionary to dataframe
-    df = pd.DataFrame(data)
-    deconv_plots = []
-    # print(df.head(5))
-    for method in deconv_methods:
-        plot = figure(width=image_display_infos.get("im_w"),
-                    height=image_display_infos.get("im_h"),
-                title="Deconvolution results",
-                x_axis_label='x',
-                y_axis_label='y',
-                output_backend="webgl",
-                )
+        ] + [f"<span style='color: red;'> Spot</span> : (x = {row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})"]), axis=1)
+
+        # Cumulative angles per spot: shape (n_spots, n_largest_cell_types+1)
+        weights = np.array([
+            [test_df.iloc[i][f'{method}_Deconv_cell{j+1}_norm_value'] for j in range(n_largest_cell_types)]
+            for i in range(n_spots)
+        ])
+        cumulative = np.hstack([np.zeros((n_spots, 1)), np.cumsum(weights, axis=1)]) * 2 * pi
+
+        # One ColumnDataSource for all spots × all cell type positions
+        source_data = {
+            'x': all_x,
+            'y': all_y,
+            'tooltip_data': test_df[f"{method}_tooltip_data"].tolist()
+        }
+        for j in range(n_largest_cell_types):
+            source_data[f'start_{j}'] = cumulative[:, j].tolist()
+            source_data[f'end_{j}'] = cumulative[:, j + 1].tolist()
+            source_data[f'color_{j}'] = [
+                colordict.get(test_df.iloc[i][f'{method}_Deconv_cell{j+1}'], '#000000')
+                for i in range(n_spots)
+            ]
+        shared_source = ColumnDataSource(source_data)
+
+        plot = figure(width=900, height=700, title=f"Deconvolution results - {method}",
+                      x_axis_label='x', y_axis_label='y', output_backend="webgl")
         plot.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
-        # Create a Div for displaying the message
-        for index, row in df.iterrows():
-            x, y = row['x'], row['y']
-            categories = row[[f'{method}_DeconvCell{i+1}_w' for i in range(n_largest_cell_types)]].values
-            cell_types = row[[f'{method}_DeconvCell{i+1}' for i in range(n_largest_cell_types)]].values
-            colors = tuple([colordict[x] for x in cell_types])
-            # Create a single ColumnDataSource for all wedges in this circle
-            circle_source = ColumnDataSource({
-                'x': [x],
-                'y': [y],
-                f"{method}_tooltip_data": [row[f"{method}_tooltip_data"]]
-            })
-            start_angle = 0
-            for i, category_value in enumerate(categories):
-                end_angle = start_angle + category_value * 2 * pi
-                wedge = plot.wedge(x='x', y='y', radius=4.7,
-                        start_angle=start_angle, end_angle=end_angle,
-                        line_width=0, fill_color=colors[i],
-                        legend_label=f"Cluster {row['Cluster']}", source=circle_source, visible=False)
-                start_angle = end_angle
+
+        for j in range(n_largest_cell_types):
+            plot.wedge(x='x', y='y', radius=4.7,
+                       start_angle=f'start_{j}', end_angle=f'end_{j}',
+                       fill_color=f'color_{j}', line_width=0, source=shared_source)
+
+        plot.add_tools(HoverTool(tooltips="<div style='width:220px'>@tooltip_data</div>"))
+        plot.visible = False
         deconv_plots.append(plot)
-    from bokeh.models import LinearColorMapper, ColorBar
-    from bokeh.transform import transform
-    from bokeh.palettes import Viridis256
 
-    rmsd_plot = figure(width=image_display_infos.get("im_w"),
-                        height=image_display_infos.get("im_h"),
-                        title="Deconvolution results comparing",
-                        x_axis_label='x',
-                        y_axis_label='y',
-                        output_backend="webgl")
-
-    rmsd_plot.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
-    min_val, max_val = min(data["error_value"]), max(data["error_value"])
+    # --- RMSD plot: single vectorized scatter (replaces n_spots individual sources) ---
+    error_values = test_df["error_value"].tolist()
+    min_val, max_val = min(error_values), max(error_values)
     color_map = LinearColorMapper(palette=Viridis256, low=min_val, high=max_val)
-    for index, row in df.iterrows():
-        x, y = row['x'], row['y']
-        error_value = row['error_value']
-        error_tooltip_data = row["error_tooltip_data"]
-        circle_source = ColumnDataSource({
-            'x': [x],
-            'y': [y],
-            'error_value': [error_value] , # Add rmsd_value for color mapping
-            'error_tooltip_data' : [error_tooltip_data]
-        })
 
-        rmsd_plot.scatter(x='x', y='y', size=5,
-                            marker="circle",
-                            fill_color=transform('error_value', color_map),  # Correct color mapping
-                            line_width=0,
-                            source=circle_source,
-                            visible=True)
+    rmsd_source = ColumnDataSource({
+        'x': all_x, 'y': all_y,
+        'error_value': error_values,
+        'error_tooltip_data': test_df['error_tooltip_data'].tolist()
+    })
+    rmsd_plot = figure(width=900, height=700, title="Deconvolution results comparing",
+                       x_axis_label='x', y_axis_label='y', output_backend="webgl")
+    rmsd_plot.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
+    rmsd_plot.scatter(x='x', y='y', size=5, marker="circle",
+                      fill_color={'field': 'error_value', 'transform': color_map},
+                      line_width=0, source=rmsd_source)
+    rmsd_plot.add_tools(HoverTool(tooltips="<div style='width:220px'>@error_tooltip_data</div>"))
 
-    # Add a color bar for the color mapping
-    color_bar = ColorBar(color_mapper=color_map,
-                        label_standoff=14,
-                        location=(0, 0),
-                        title='Color Range')
-
-    # Add color bar to the plot
+    color_bar = ColorBar(color_mapper=color_map, label_standoff=14, location=(0, 0), title='Color Range')
     rmsd_plot.add_layout(color_bar, 'right')
-    ########
+    rmsd_plot.visible = False
 
     text1 = """
         <div style="
@@ -577,14 +545,9 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
 
     """))
 
-    spacer1 = Spacer(width=100)
-    spacer2 = Spacer(width=100)
-    spacer3 = Spacer(width=100)
-    spacer4 = Spacer(width=100)
-
-    # Assuming you have your data in a pandas DataFrame called 'df'
-    csv_source = ColumnDataSource({'data': [df.drop(columns=[f"{method}_tooltip_data" for method in deconv_methods]).to_csv(index=False)]})
-    download_button = Button(label="Download raw data", width=100, button_type = 'primary')
+    download_df = test_df.drop(columns=[col for col in test_df.columns if 'tooltip' in col])
+    csv_source = ColumnDataSource({'data': [download_df.to_csv(index=False)]})
+    download_button = Button(label="Download raw data", width=100, button_type='primary')
     download_button.js_on_click(CustomJS(args=dict(source=csv_source), code="""
         const data = source.data['data'][0];
         const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
@@ -595,69 +558,17 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         link.click();
         URL.revokeObjectURL(url);
     """))
-    tap_tool = TapTool()
-    p.add_tools(tap_tool)
-    # Associez le callback au TapTool
-    hover = HoverTool(tooltips="""
-        <div style="width:220px">
-            @tooltip_data
-        </div>
-    """)
-    hover_error = HoverTool(tooltips="""
-        <div style="width:220px">
-            @error_tooltip_data
-        </div>
-    """)
-    rmsd_plot.add_tools(hover_error)
-    hover_list = []
-    for method in deconv_methods:
-        tooltip_string = f"""
-            <div style="width:220px">
-                @{method}_tooltip_data
-            </div>
-        """
-        # Create the HoverTool with the constructed tooltip string
-        h = HoverTool(tooltips=tooltip_string)
-        hover_list.append(h)
-    p.add_tools(hover)
-    for index, plot in enumerate(deconv_plots):
-        plot.add_tools(hover_list[index])
-        leg_plot = plot.legend[0]
-        leg_plot.glyph_width = 0
-        leg_plot.label_text_font_size = "15pt"
-        plot.add_layout(leg_plot,'right')
-        plot.legend.location = "top_right"
-        plot.legend.click_policy = "hide"
-        plot.visible = False
-        plot.legend.visible = True
-        sorted_items_plot = sorted(leg_plot.items, key=lambda item: item.label['value'])
-        leg_plot.items = sorted_items_plot
+
+    p.add_tools(TapTool())
+
     leg = p.legend[0]
     leg.glyph_height = 20
     leg.glyph_width = 20
     leg.label_text_font_size = "15pt"
-    sorted_items = sorted(leg.items, key=lambda item: item.label['value'])
-    leg.items = sorted_items
-    p.add_layout(leg,'right')
+    leg.items = sorted(leg.items, key=lambda item: item.label['value'])
+    p.add_layout(leg, 'right')
 
-    title_box = Div(
-        text= title_text,
-        width=700,
-        height=100
-    )
-
-    from bokeh.layouts import column, row
-
-    # Set size for the main plots
-    p.width = 900  # Set the width
-    p.height = 700  # Set the height
-    rmsd_plot.width = 900  # Set the width
-    rmsd_plot.height = 700  # Set the height
-
-    # Set size for each plot in 'deconv_plots'
-    for plot in deconv_plots:
-        plot.width = 900
-        plot.height = 700
+    title_box = Div(text=title_text, width=700, height=100)
 
     # Create the row for the buttons and slider
     buttons_col = column(
@@ -716,4 +627,4 @@ if __name__ == "__main__":
     print(f"Deconvolution methods {deconv_methods}")
     nb_spots_samples = processed_data.shape[0]
     print(f"Generating vis with {nb_spots_samples} spots and top {n_largest_cell_types} cells...\n")
-    vis_with_separate_clusters_view(reduced_df=processed_data, image_path = image_path, deconv_methods = deconv_methods,nb_spots_samples = nb_spots_samples, output= output_html )
+    vis_with_separate_clusters_view(reduced_df=processed_data, image_path=image_path, deconv_methods=deconv_methods, nb_spots_samples=nb_spots_samples, n_largest_cell_types=n_largest_cell_types, output=output_html)
