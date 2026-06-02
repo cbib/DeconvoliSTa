@@ -34,7 +34,7 @@ deconv_args = get_config_var(params, "deconv_args")
 
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
-rctd_script = "subworkflows/deconvolution/spatialdwls/script_nf.R"
+rctd_script = "subworkflows/deconvolution/spatialdwls/script.R"
 
 annot = get_config_var(config, "annot", get_config_var(params, "annot"))
 map_genes = get_config_var(config, "map_genes", "false")
@@ -51,7 +51,7 @@ rule run_spatialdwls:
         12
     shell:
         """
-        Rscript subworkflows/deconvolution/spatialdwls/script_nf.R \
+        Rscript subworkflows/deconvolution/spatialdwls/script.R \
             --sc_input {sc_input} --sp_input {sp_input} \
             --annot {annot} --output {output}  --map_genes {map_genes}
         """

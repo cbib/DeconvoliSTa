@@ -34,7 +34,7 @@ deconv_args = get_config_var(params, "deconv_args")
 
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
-rctd_script = "subworkflows/deconvolution/rctd/script_nf.R"
+rctd_script = "subworkflows/deconvolution/rctd/script.R"
 
 annot = get_config_var(config, "annot", get_config_var(params, "annot"))
 map_genes = get_config_var(config, "map_genes", "false")
@@ -46,7 +46,7 @@ rule run_rctd:
     output:
         output
     singularity:
-        "docker://abderahim02/sp_rctd:latest" #"docker://csangara/sp_rctd:latest"
+        "/mnt/cbib/RetinRNA/spatial/sp_rctd_latest.sif" #"docker://csangara/sp_rctd:latest"
     threads:
         12
     shell:
