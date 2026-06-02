@@ -28,7 +28,7 @@ output_suffix = get_basename(sp_input)
 runID_props = get_config_var(params, "runID_props")
 method = "cell2location"
 formatted_output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
-use_gpu = get_config_var(config, "use_gpu")
+use_gpu = "false"
 annot = get_config_var(config, "annot", get_config_var(params, "annot"))
 map_genes = get_config_var(config, "map_genes", "false")
 
@@ -67,7 +67,7 @@ if not load_model:
             temp(f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad")
             # f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad"
         singularity:
-            "docker://csangara/sp_cell2location:latest"
+            "/mnt/cbib/RetinRNA/spatial/sp_cell2location_h100.sif"
         threads:
             8
         shell:
@@ -85,7 +85,7 @@ if not load_model:
         output:
             temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
         singularity:
-            "docker://csangara/sp_cell2location:latest"
+            "/mnt/cbib/RetinRNA/spatial/sp_cell2location_h100.sif"
         threads:
             8
         shell:
@@ -122,7 +122,7 @@ else:
         output:
             temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
         singularity:
-            "docker://csangara/sp_cell2location:latest"
+            "/mnt/cbib/RetinRNA/spatial/sp_cell2location_h100.sif"
         threads:
             8
         shell:
