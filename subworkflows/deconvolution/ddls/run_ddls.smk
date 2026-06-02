@@ -31,7 +31,7 @@ rule run_ddls:
     output:
         output
     singularity:
-        "docker://abderahim02/sp_ddls:latest" #"ddls.sif"
+        "docker://csangara/sp_ddls:latest"
     threads:
         12
     shell: # --output {output} --epochs 10000 --batch_size 10

@@ -46,8 +46,8 @@ par <- list(
   n_hvgs = 3000,           # Number of highly variable genes to keep
   pct = 0.1,               # Percentage of cells which genes have to be expressed
   assay_oi = "RNA",
-  sc_input = 'datafiles_st_deconvolution/core_GBMap.rds',
-  sp_input = 'datafiles_st_deconvolution/UKF243_T_ST_1_raw.rds',
+  sc_input = 'unit-test/test_sc_data.rds',
+  sp_input = 'unit-test/test_sp_data.rds',
   output = "props_dwls_coremap.tsv",
   annot = "annotation_level_4"
 )

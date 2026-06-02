@@ -11,8 +11,8 @@ par <- list(
 par <- list(
     cell_min = 5,
     annot = "cell_type",
-    sc_input = "datafiles_st_deconvolution/core_GBMap.rds",
-    sp_input = "datafiles_st_deconvolution/UKF243_T_ST_1_raw.rds",
+    sc_input = "unit-test/test_sc_data.rds",
+    sp_input = "unit-test/test_sp_data.rds",
     num_cores = 12,
     map_genes = 'false'
 )
