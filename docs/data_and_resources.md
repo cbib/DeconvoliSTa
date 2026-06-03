@@ -60,7 +60,7 @@ Pre-built container images required to run each method. Stored on Apollo at `/mn
 | spatialDWLS | — | `docker://csangara/sp_spatialdwls:latest` |
 | NNLS | — | `docker://csangara/sp_nnls:latest` |
 | DDLS | — | `docker://csangara/sp_ddls:latest` |
-| Dirichlet | — | `docker://csangara/sp_dirichlet:latest` |
+| Dirichlet | — | `docker://csangara/seuratdisk:latest` *(image de conversion utilisée en attendant une image dédiée)* |
 | Seurat | — | *(no .smk file yet — not runnable)* |
 | Evaluation | — | `docker://csangara/sp_eval:latest` |
 | RDS↔H5AD conversion | — | `docker://csangara/seuratdisk:latest` |

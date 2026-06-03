@@ -2,7 +2,7 @@
 import os
 import yaml
 
-with open("my_config.yaml", "r") as config_file:
+with open("config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
 # # Fonction pour obtenir le nom de base du fichier sans extension
@@ -16,7 +16,7 @@ output_suffix = get_basename(sp_input)
 runID_props = params["runID_props"]
 method = "dirichlet"
 formatted_output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
-use_gpu = config["use_gpu"]
+use_gpu = config.get("use_gpu", "false")
 
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
