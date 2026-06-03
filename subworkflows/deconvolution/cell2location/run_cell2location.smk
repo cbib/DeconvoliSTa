@@ -35,7 +35,7 @@ map_genes = get_config_var(config, "map_genes", "false")
 # Définir le chemin absolu du script R
 script_dir = os.path.dirname(os.path.abspath(__file__))
 convert_script = "subworkflows/deconvolution/convertBetweenRDSandH5AD.R"
-load_model = get_config_var(config, "load_model") == 'true'
+load_model = get_config_var(config, "load_model", "false") == 'true'
 
 
 if not load_model:
