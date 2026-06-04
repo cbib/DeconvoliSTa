@@ -32,5 +32,5 @@ rule run_dirichlet:
         "docker://csangara/seuratdisk:latest"
     shell:
         """
-        Rscript {dirichlet_script} --sp_input {input.sp_input} --output {formatted_output}
+        Rscript {dirichlet_script} --sp_input {input.sp_input} --output {output}
         """
