@@ -23,18 +23,25 @@ conda activate snakemake
 
 cd /scratch/nmoualhi/DeconvoliSTa
 
+# Config commune, réutilisée par le déverrouillage auto et le run
+CONFIG=(
+    mode="run_dataset"
+    methods="${METHODS:-rctd,cell2location,nnls,spatialdwls,dirichlet,ddls}"
+    sc_input="unit-test/test_sc_data.rds"
+    sp_input="unit-test/test_sp_data.rds"
+    output="/scratch/nmoualhi/res"
+    use_gpu="false"
+    skip_metrics="false"
+    annot="subclass"
+    map_genes="false"
+    load_model="false"
+)
+
+# Déverrouillage auto (jobs séquentiels, un seul à la fois) : évite le LockException après un scancel
+snakemake -s main.smk --unlock --config "${CONFIG[@]}" || true
+
 snakemake -s main.smk -c 12 \
-    --config \
-    mode="run_dataset" \
-    methods="${METHODS:-rctd,cell2location,nnls,spatialdwls,dirichlet,ddls}" \
-    sc_input="unit-test/test_sc_data.rds" \
-    sp_input="unit-test/test_sp_data.rds" \
-    output="/scratch/nmoualhi/res" \
-    use_gpu="false" \
-    skip_metrics="false" \
-    annot="subclass" \
-    map_genes="false" \
-    load_model="false" \
+    --config "${CONFIG[@]}" \
     --use-singularity \
     --singularity-args '--bind /mnt/cbib/RetinRNA/spatial --bind /scratch/nmoualhi' \
     --keep-going
