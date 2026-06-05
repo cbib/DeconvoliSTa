@@ -1,0 +1,10 @@
+Bootstrap: docker
+From: csangara/sp_nnls:latest
+
+# Overlay on the published benchmark image to add org.Hs.eg.db, which is
+# missing upstream and required for human gene-symbol mapping at runtime.
+# Build:  singularity build --fakeroot sp_nnls_cbib.sif nnls.def
+
+%post
+    R -e "if (!requireNamespace('BiocManager', quietly=TRUE)) install.packages('BiocManager', repos='https://cloud.r-project.org'); BiocManager::install('org.Hs.eg.db', ask=FALSE, update=FALSE)"
+    R -e "library(org.Hs.eg.db); cat('org.Hs.eg.db OK\n')"

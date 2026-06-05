@@ -46,7 +46,7 @@ rule run_spatialdwls:
     output:
         output
     singularity:
-        "docker://csangara/sp_spatialdwls:latest" #"docker://csangara/sp_rctd:latest"
+        "/mnt/cbib/RetinRNA/spatial/sp_spatialdwls_cbib.sif" #"docker://csangara/sp_spatialdwls:latest"
     threads:
         12
     shell:

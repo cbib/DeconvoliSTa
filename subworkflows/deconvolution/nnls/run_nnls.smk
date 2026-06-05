@@ -31,7 +31,7 @@ rule run_nnls:
     output:
         output
     singularity:
-        "docker://csangara/sp_nnls:latest"
+        "/mnt/cbib/RetinRNA/spatial/sp_nnls_cbib.sif" #"docker://csangara/sp_nnls:latest"
     threads:
         8 
     shell:
