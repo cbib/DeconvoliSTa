@@ -83,12 +83,13 @@ def main():
 
     cuda_device = args.cuda_device
     print("cuda device requested =", cuda_device)
-    print("Forcing CPU execution for compatibility.")
 
     sp_data_path = args.sp_data_path
     output_folder = args.out_dir
 
     assert (cuda_device.isdigit() or cuda_device == "cpu"), "invalid device input"
+    accelerator = "cpu" if cuda_device == "cpu" else "gpu"
+    print("Using accelerator:", accelerator)
 
     print("Parameters\n==========")
     print("Detection alpha: {}\nCells per location: {}".format(
@@ -151,12 +152,12 @@ def main():
         detection_alpha=args.detection_alpha
     )
 
-    print("Training cell2location model on CPU...")
+    print("Training cell2location model on", accelerator, "...")
     mod.train(
         max_epochs=args.epochs,
         batch_size=None,
         train_size=1,
-        accelerator="cpu"
+        accelerator=accelerator
     )
 
     print("Exporting posterior on CPU...")

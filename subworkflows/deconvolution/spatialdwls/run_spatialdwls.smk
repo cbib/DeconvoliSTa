@@ -46,7 +46,7 @@ rule run_spatialdwls:
     output:
         output
     singularity:
-        "/mnt/cbib/RetinRNA/spatial/sp_spatialdwls_cbib.sif" #"docker://csangara/sp_spatialdwls:latest"
+        "/scratch/nmoualhi/sif/sp_spatialdwls_cbib.sif" #"docker://csangara/sp_spatialdwls:latest" ; TODO: déplacer vers un emplacement partagé (cbib write / Docker Hub)
     threads:
         12
     shell:

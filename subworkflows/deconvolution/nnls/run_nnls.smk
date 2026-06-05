@@ -31,7 +31,7 @@ rule run_nnls:
     output:
         output
     singularity:
-        "/mnt/cbib/RetinRNA/spatial/sp_nnls_cbib.sif" #"docker://csangara/sp_nnls:latest"
+        "/scratch/nmoualhi/sif/sp_nnls_cbib.sif" #"docker://csangara/sp_nnls:latest" ; TODO: déplacer vers un emplacement partagé (cbib write / Docker Hub)
     threads:
         8 
     shell:

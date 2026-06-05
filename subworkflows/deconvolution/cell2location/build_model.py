@@ -70,9 +70,10 @@ def main():
     args = prs.parse_args()
     cuda_device = args.cuda_device
     print("cuda device requested = ", cuda_device)
-    print("Forcing CPU execution for compatibility with cluster driver.")
 
     assert (cuda_device.isdigit() or cuda_device == "cpu"), "invalid device id"
+    accelerator = "cpu" if cuda_device == "cpu" else "gpu"
+    print("Using accelerator:", accelerator)
     assert os.path.exists(args.sc_data_path), f"{args.sc_data_path} sc file not found"
 
     if args.out_dir is None:
@@ -132,13 +133,13 @@ def main():
     print("Building regression model...")
     mod = RegressionModel(adata_scrna_raw)
 
-    print("Training regression model on CPU...")
+    print("Training regression model on", accelerator, "...")
     mod.train(
         max_epochs=args.epochs,
         batch_size=2500,
         train_size=1,
         lr=0.002,
-        accelerator="cpu"
+        accelerator=accelerator
     )
 
     print("Exporting posterior on CPU...")
