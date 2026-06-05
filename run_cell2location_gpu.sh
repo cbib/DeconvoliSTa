@@ -4,7 +4,10 @@
 
 #SBATCH --job-name=c2l_gpu
 #SBATCH --partition=gpu
-#SBATCH --gres=gpu:nvidia_h100_nvl_4g.47gb
+# MIG H100 : 1g.24gb (2 dispo) suffit pour les données de test. Le 4g.47gb n'a
+# qu'UNE instance (souvent occupée). Pour de gros datasets réels, monter à
+# 4g.47gb ou nvidia_h100_nvl (carte entière) via override : sbatch --gres=...
+#SBATCH --gres=gpu:nvidia_h100_nvl_1g.24gb
 #SBATCH --time=24:00:00
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=8
@@ -45,7 +48,7 @@ snakemake -s main.smk -c 8 \
     map_genes="false" \
     load_model="false" \
     --use-singularity \
-    --singularity-args '--nv --bind /mnt/cbib/RetinRNA/spatial' \
+    --singularity-args '--nv --bind /mnt/cbib/RetinRNA/spatial --bind /scratch/nmoualhi' \
     --keep-going
 
 echo '########################################'

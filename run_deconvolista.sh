@@ -36,7 +36,7 @@ snakemake -s main.smk -c 12 \
     map_genes="false" \
     load_model="false" \
     --use-singularity \
-    --singularity-args '--bind /mnt/cbib/RetinRNA/spatial' \
+    --singularity-args '--bind /mnt/cbib/RetinRNA/spatial --bind /scratch/nmoualhi' \
     --keep-going
 
 echo '########################################'
