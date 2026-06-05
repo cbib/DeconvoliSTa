@@ -66,7 +66,7 @@ if not load_model:
         output:
             temp(f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad")
         singularity:
-            "/mnt/cbib/RetinRNA/spatial/sp_cell2location_h100.sif"
+            "/scratch/nmoualhi/sif/sp_cell2location_cu128.sif" #cu128 pour driver Apollo 570 ; ex-/mnt/cbib/.../sp_cell2location_h100.sif (cu130, incompatible)
         threads:
             8
         resources:
@@ -87,7 +87,7 @@ if not load_model:
         output:
             temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
         singularity:
-            "/mnt/cbib/RetinRNA/spatial/sp_cell2location_h100.sif"
+            "/scratch/nmoualhi/sif/sp_cell2location_cu128.sif" #cu128 pour driver Apollo 570 ; ex-/mnt/cbib/.../sp_cell2location_h100.sif (cu130, incompatible)
         threads:
             8
         resources:
@@ -127,7 +127,7 @@ else:
         output:
             temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
         singularity:
-            "/mnt/cbib/RetinRNA/spatial/sp_cell2location_h100.sif"
+            "/scratch/nmoualhi/sif/sp_cell2location_cu128.sif" #cu128 pour driver Apollo 570 ; ex-/mnt/cbib/.../sp_cell2location_h100.sif (cu130, incompatible)
         threads:
             8
         resources:
