@@ -26,7 +26,7 @@ cd /scratch/nmoualhi/DeconvoliSTa
 snakemake -s main.smk -c 12 \
     --config \
     mode="run_dataset" \
-    methods="rctd,cell2location,nnls,spatialdwls,dirichlet,ddls" \
+    methods="${METHODS:-rctd,cell2location,nnls,spatialdwls,dirichlet,ddls}" \
     sc_input="unit-test/test_sc_data.rds" \
     sp_input="unit-test/test_sp_data.rds" \
     output="/scratch/nmoualhi/res" \
