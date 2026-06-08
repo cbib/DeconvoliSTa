@@ -314,7 +314,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
 
     # --- Cluster plot (one scatter renderer per cluster, already O(n_clusters)) ---
     p = figure(width=900, height=700, title="Clustering results",
-               x_axis_label='x', y_axis_label='y', output_backend="webgl")
+               x_axis_label='x', y_axis_label='y')
     p.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
 
     cluster_source_df = pd.DataFrame({
@@ -364,7 +364,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         shared_source = ColumnDataSource(source_data)
 
         plot = figure(width=900, height=700, title=f"Deconvolution results - {method}",
-                      x_axis_label='x', y_axis_label='y', output_backend="webgl",
+                      x_axis_label='x', y_axis_label='y',
                       x_range=p.x_range, y_range=p.y_range)
         plot.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
 
@@ -388,7 +388,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         'error_tooltip_data': test_df['error_tooltip_data'].tolist()
     })
     rmsd_plot = figure(width=900, height=700, title="Deconvolution results comparing",
-                       x_axis_label='x', y_axis_label='y', output_backend="webgl",
+                       x_axis_label='x', y_axis_label='y',
                        x_range=p.x_range, y_range=p.y_range)
     rmsd_plot.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
     rmsd_plot.scatter(x='x', y='y', size=5, marker="circle",
