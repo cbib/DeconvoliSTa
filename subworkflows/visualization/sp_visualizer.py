@@ -263,7 +263,7 @@ def post_process_data(norm_weights_filepaths, st_coords_filepath, data_clustered
 # <!                       BOKEH VISUALIZATION                               !>
 # <! ------------------------------------------------------------------------!>
 from bokeh.events import ButtonClick
-from bokeh.models import BoxAnnotation, Label, Plot, Rect, Text, Button, CustomJS, Div,Slider, PanTool
+from bokeh.models import BoxAnnotation, Label, Plot, Rect, Text, Button, CustomJS, Div,Slider, PanTool, CheckboxButtonGroup
 from bokeh.plotting import figure
 from bokeh.transform import factor_cmap
 from bokeh.layouts import column, row, gridplot,Spacer
@@ -322,16 +322,21 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         'Cluster': test_df['Cluster'].tolist(),
         'tooltip_data': test_df['tooltip_data'].tolist()
     })
+    cluster_renderers = []
+    cluster_ids = []
     for cluster, group in cluster_source_df.groupby('Cluster'):
         color = clusters_colordict.get(cluster, '#000000')
-        p.scatter(x='x', y='y', size=5, marker="circle", fill_color=color,
+        r = p.scatter(x='x', y='y', size=5, marker="circle", fill_color=color,
                   line_width=0, source=ColumnDataSource(group),
                   legend_label=f"Cluster {int(cluster)}")
+        cluster_renderers.append(r)
+        cluster_ids.append(int(cluster))
     p.add_tools(HoverTool(tooltips="<div style='width:220px'>@tooltip_data{safe}</div>"))
 
     # --- Deconv plots: vectorized — 1 source per method, n_largest_cell_types renderers ---
     # Replaces the previous n_spots × n_cell_types individual sources/renderers loop.
     deconv_plots = []
+    deconv_sources = []
     for method in deconv_methods:
         test_df[f"{method}_tooltip_data"] = test_df.apply(lambda row: '<br>'.join([
             f"<div style='display:flex;align-items:center;'>"
@@ -352,6 +357,8 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         source_data = {
             'x': all_x,
             'y': all_y,
+            'cluster': [int(c) for c in test_df['Cluster'].tolist()],
+            'alpha': [1.0] * n_spots,
             'tooltip_data': test_df[f"{method}_tooltip_data"].tolist()
         }
         for j in range(n_largest_cell_types):
@@ -371,11 +378,12 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         for j in range(n_largest_cell_types):
             plot.wedge(x='x', y='y', radius=4.7,
                        start_angle=f'start_{j}', end_angle=f'end_{j}',
-                       fill_color=f'color_{j}', line_width=0, source=shared_source)
+                       fill_color=f'color_{j}', fill_alpha='alpha', line_width=0, source=shared_source)
 
         plot.add_tools(HoverTool(tooltips="<div style='width:220px'>@tooltip_data{safe}</div>"))
         plot.visible = False
         deconv_plots.append(plot)
+        deconv_sources.append(shared_source)
 
     # --- RMSD plot: single vectorized scatter (replaces n_spots individual sources) ---
     error_values = test_df["error_value"].tolist()
@@ -384,6 +392,8 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
 
     rmsd_source = ColumnDataSource({
         'x': all_x, 'y': all_y,
+        'cluster': [int(c) for c in test_df['Cluster'].tolist()],
+        'alpha': [1.0] * n_spots,
         'error_value': error_values,
         'error_tooltip_data': test_df['error_tooltip_data'].tolist()
     })
@@ -393,12 +403,50 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     rmsd_plot.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
     rmsd_plot.scatter(x='x', y='y', size=5, marker="circle",
                       fill_color={'field': 'error_value', 'transform': color_map},
-                      line_width=0, source=rmsd_source)
+                      fill_alpha='alpha', line_width=0, source=rmsd_source)
     rmsd_plot.add_tools(HoverTool(tooltips="<div style='width:220px'>@error_tooltip_data{safe}</div>"))
 
     color_bar = ColorBar(color_mapper=color_map, label_standoff=14, location=(0, 0), title='Color Range')
     rmsd_plot.add_layout(color_bar, 'right')
     rmsd_plot.visible = False
+
+    # --- Filtre de clusters PARTAGÉ entre toutes les vues (clusters + chaque méthode + comparaison) ---
+    # Une sélection de clusters s'applique partout (comme le zoom). Boutons Select/Deselect all.
+    cluster_filter_code = """
+        const active = new Set(checkbox.active.map(i => cluster_ids[i]));
+        for (let k = 0; k < cluster_renderers.length; k++) {
+            cluster_renderers[k].visible = active.has(cluster_ids[k]);
+        }
+        const all_sources = deconv_sources.concat([rmsd_source]);
+        for (const s of all_sources) {
+            const cl = s.data['cluster'];
+            const al = s.data['alpha'];
+            for (let i = 0; i < cl.length; i++) { al[i] = active.has(cl[i]) ? 1 : 0; }
+            s.change.emit();
+        }
+    """
+    cluster_checkbox = CheckboxButtonGroup(
+        labels=[f"Cluster {c}" for c in cluster_ids],
+        active=list(range(len(cluster_ids)))
+    )
+    cluster_checkbox.js_on_change('active', CustomJS(
+        args=dict(checkbox=cluster_checkbox, deconv_sources=deconv_sources,
+                  rmsd_source=rmsd_source, cluster_renderers=cluster_renderers,
+                  cluster_ids=cluster_ids),
+        code=cluster_filter_code))
+    select_all_btn = Button(label="Select all clusters", width=120, button_type='success')
+    select_all_btn.js_on_click(CustomJS(
+        args=dict(checkbox=cluster_checkbox, cluster_ids=cluster_ids),
+        code="checkbox.active = Array.from(Array(cluster_ids.length).keys());"))
+    deselect_all_btn = Button(label="Deselect all clusters", width=120, button_type='warning')
+    deselect_all_btn.js_on_click(CustomJS(
+        args=dict(checkbox=cluster_checkbox),
+        code="checkbox.active = [];"))
+    cluster_controls = column(
+        Div(text="<b>Clusters</b> (filtre appliqué à toutes les vues) :", width=320),
+        row(select_all_btn, deselect_all_btn),
+        cluster_checkbox
+    )
 
     text1 = """
         <div style="
@@ -576,6 +624,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     buttons_col = column(
         show_all_button, *button_methods,
         rmsd_button, download_button , slider,
+        cluster_controls,
         Spacer(height=20)
     )
 
@@ -597,7 +646,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     )
 
     p.legend.location = "top_right"
-    p.legend.click_policy = "hide"
+    p.legend.click_policy = "none"  # légende = clé de couleurs ; le filtre est piloté par les boutons Cluster
     p.legend.visible = True
     rmsd_plot.visible = False
 
