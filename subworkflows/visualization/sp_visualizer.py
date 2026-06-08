@@ -327,7 +327,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         p.scatter(x='x', y='y', size=5, marker="circle", fill_color=color,
                   line_width=0, source=ColumnDataSource(group),
                   legend_label=f"Cluster {int(cluster)}")
-    p.add_tools(HoverTool(tooltips="<div style='width:220px'>@tooltip_data</div>"))
+    p.add_tools(HoverTool(tooltips="<div style='width:220px'>@tooltip_data{safe}</div>"))
 
     # --- Deconv plots: vectorized — 1 source per method, n_largest_cell_types renderers ---
     # Replaces the previous n_spots × n_cell_types individual sources/renderers loop.
@@ -364,7 +364,8 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         shared_source = ColumnDataSource(source_data)
 
         plot = figure(width=900, height=700, title=f"Deconvolution results - {method}",
-                      x_axis_label='x', y_axis_label='y', output_backend="webgl")
+                      x_axis_label='x', y_axis_label='y', output_backend="webgl",
+                      x_range=p.x_range, y_range=p.y_range)
         plot.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
 
         for j in range(n_largest_cell_types):
@@ -372,7 +373,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
                        start_angle=f'start_{j}', end_angle=f'end_{j}',
                        fill_color=f'color_{j}', line_width=0, source=shared_source)
 
-        plot.add_tools(HoverTool(tooltips="<div style='width:220px'>@tooltip_data</div>"))
+        plot.add_tools(HoverTool(tooltips="<div style='width:220px'>@tooltip_data{safe}</div>"))
         plot.visible = False
         deconv_plots.append(plot)
 
@@ -387,12 +388,13 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         'error_tooltip_data': test_df['error_tooltip_data'].tolist()
     })
     rmsd_plot = figure(width=900, height=700, title="Deconvolution results comparing",
-                       x_axis_label='x', y_axis_label='y', output_backend="webgl")
+                       x_axis_label='x', y_axis_label='y', output_backend="webgl",
+                       x_range=p.x_range, y_range=p.y_range)
     rmsd_plot.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
     rmsd_plot.scatter(x='x', y='y', size=5, marker="circle",
                       fill_color={'field': 'error_value', 'transform': color_map},
                       line_width=0, source=rmsd_source)
-    rmsd_plot.add_tools(HoverTool(tooltips="<div style='width:220px'>@error_tooltip_data</div>"))
+    rmsd_plot.add_tools(HoverTool(tooltips="<div style='width:220px'>@error_tooltip_data{safe}</div>"))
 
     color_bar = ColorBar(color_mapper=color_map, label_standoff=14, location=(0, 0), title='Color Range')
     rmsd_plot.add_layout(color_bar, 'right')

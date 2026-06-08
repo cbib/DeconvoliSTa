@@ -1,0 +1,12 @@
+Bootstrap: docker
+From: python:3.11-slim
+
+# Conteneur pour la génération de la visu interactive (sp_visualizer.py).
+# Build:  singularity build --fakeroot visu.sif visu.def
+# Run:    singularity exec --bind <data> visu.sif python sp_visualizer.py <args...>
+
+%post
+    pip install --no-cache-dir pandas bokeh pillow numpy
+
+%test
+    python -c "import pandas, bokeh, PIL, numpy; print('visu deps OK | bokeh', bokeh.__version__)"
