@@ -1,0 +1,17 @@
+Bootstrap: docker
+From: csangara/sp_spatialdwls:latest
+
+# Overlay on the Seurat image (R 4.1 / Bioconductor 3.14) to add BayesSpace,
+# for spatial clustering of Visium spots -> `BayesSpace` column expected by the
+# visualization (data_clustered input).
+# Build:  singularity build --fakeroot sp_bayesspace.sif bayesspace.def
+
+%post
+    # R 4.1.3 in the base image: the latest CRAN versions require R >= 4.3 (e.g. xgboost).
+    # -> point CRAN at a dated Posit snapshot (2022-10-01) = R 4.1-compatible versions.
+    # BiocManager installs BayesSpace (Bioc 3.14) + its CRAN deps (xgboost...) from the snapshot.
+    R -e "options(repos=c(CRAN='https://packagemanager.posit.co/cran/2022-10-01')); if (!requireNamespace('BiocManager', quietly=TRUE)) install.packages('BiocManager'); BiocManager::install('BayesSpace', ask=FALSE, update=FALSE)"
+    R -e "library(BayesSpace); library(Seurat); cat('BayesSpace + Seurat OK\n')"
+
+%test
+    R -e "library(BayesSpace); cat('OK BayesSpace', as.character(packageVersion('BayesSpace')), '\n')"

@@ -1,27 +1,28 @@
 Bootstrap: localimage
-From: /data/nejma/sif/sp_cell2location_h100.sif
+From: sp_cell2location_h100.sif
 
-# Overlay sur l'image cell2location du labo (sp_cell2location_h100.sif) pour
-# remplacer torch 2.11.0+cu130 (CUDA 13.0, incompatible driver Apollo 570/CUDA
-# 12.8) par la MEME version torch 2.11.0 buildée pour CUDA 12.8 (cu128).
-# Aucun autre paquet n'est touché : scvi-tools / cell2location / lightning
-# restent identiques (prouvés fonctionnels en CPU).
+# Overlay on the lab's cell2location image (sp_cell2location_h100.sif) to replace
+# torch 2.11.0+cu130 (CUDA 13.0, incompatible with the Apollo 570 driver / CUDA
+# 12.8) with the SAME torch 2.11.0 built for CUDA 12.8 (cu128). No other package
+# is touched: scvi-tools / cell2location / lightning stay identical.
 #
-# Build (sila, internet + fakeroot requis) :
+# The base image (sp_cell2location_h100.sif) is the lab's private image, not on a
+# registry: place it in the build directory (or adjust the From: path above).
+# Build (needs internet + fakeroot):
 #   singularity build --fakeroot sp_cell2location_cu128.sif cell2location_cu128.def
 
 %post
     PIP=/opt/conda/envs/cell2loc_env/bin/pip
     PY=/opt/conda/envs/cell2loc_env/bin/python
 
-    # Remplace torch par la build cu128 (CUDA 12.8). L'index pytorch fournit
-    # torch + ses libs nvidia-*-cu12 ; PyPI couvre les deps pures-python.
+    # Replace torch with the cu128 build (CUDA 12.8). The pytorch index provides
+    # torch + its nvidia-*-cu12 libs; PyPI covers the pure-python deps.
     $PIP install --force-reinstall --no-cache-dir \
         torch==2.11.0+cu128 \
         --index-url https://download.pytorch.org/whl/cu128 \
         --extra-index-url https://pypi.org/simple
 
-    # Vérifie que la build CUDA est bien 12.8 (is_available se teste sur GPU réel)
+    # Check the CUDA build is 12.8 (is_available can only be tested on a real GPU)
     $PY -c "import torch; print('torch', torch.__version__, '| cuda build', torch.version.cuda)"
 
 %test

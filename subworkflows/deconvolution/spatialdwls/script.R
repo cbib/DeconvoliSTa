@@ -11,19 +11,22 @@ convert_query_geneSymbol_to_ensemblID <- function(spatial_query){
   ## The following code chunk is to be applied only if the reference single cell dataset
   ## contains ENSEMBL identifiers instead of gene symbols (as in Visium data)
   
-  master_gene_table <- mapIds(org.Hs.eg.db, keys = rownames(spatial_query@counts), keytype = "SYMBOL", column="ENSEMBL")
-  #master_gene_table <- as.data.frame(master_gene_table)
-    cat ("oaak\n")
-  # get the Ensembl ids with gene symbols i.e. remove those with NA's for gene symbols
+  # Seurat-version-agnostic: extract counts via GetAssayData (a Seurat object has no
+  # @counts slot at the top level; it lives in the assay).
+  cm <- GetAssayData(spatial_query, slot = "counts")
+  master_gene_table <- mapIds(org.Hs.eg.db, keys = rownames(cm), keytype = "SYMBOL", column = "ENSEMBL")
+  # keep genes with a found ENSEMBL id; drop duplicate ENSEMBL ids (unique rownames)
   inds <- which(!is.na(master_gene_table))
   found_genes <- master_gene_table[inds]
-  
-  # subset your data frame based on the found_genes
-  df2 <- spatial_query@counts[names(found_genes), ]
-  rownames(df2) <- found_genes
-  spatial_query@counts <- df2
-  
-  return(spatial_query)
+  found_genes <- found_genes[!duplicated(found_genes)]
+
+  cm <- cm[names(found_genes), , drop = FALSE]
+  rownames(cm) <- unname(found_genes)
+
+  new_obj <- CreateSeuratObject(counts = cm)
+  # preserve spatial coords (same cells); harmless if it fails (coords are optional)
+  try(new_obj@images <- spatial_query@images, silent = TRUE)
+  return(new_obj)
 }
 
 par <- list(

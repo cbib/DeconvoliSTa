@@ -274,7 +274,7 @@ import math
 
     
    
-def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_spots_samples, n_largest_cell_types, output, show_legend=False, show_figure=False):
+def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_spots_samples, n_largest_cell_types, output, cluster_composition=None, show_legend=False, show_figure=False):
     from bokeh.models import LinearColorMapper, ColorBar
     from bokeh.palettes import Viridis256
 
@@ -410,8 +410,8 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     rmsd_plot.add_layout(color_bar, 'right')
     rmsd_plot.visible = False
 
-    # --- Filtre de clusters PARTAGÉ entre toutes les vues (clusters + chaque méthode + comparaison) ---
-    # Une sélection de clusters s'applique partout (comme le zoom). Boutons Select/Deselect all.
+    # --- Cluster filter SHARED across all views (clusters + each method + comparison) ---
+    # A cluster selection applies everywhere (like the zoom). Select/Deselect all buttons.
     cluster_filter_code = """
         const active = new Set(checkbox.active.map(i => cluster_ids[i]));
         for (let k = 0; k < cluster_renderers.length; k++) {
@@ -443,10 +443,71 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         args=dict(checkbox=cluster_checkbox),
         code="checkbox.active = [];"))
     cluster_controls = column(
-        Div(text="<b>Clusters</b> (filtre appliqué à toutes les vues) :", width=320),
+        Div(text="<b>Clusters</b> (filter applied to all views):", width=320),
         row(select_all_btn, deselect_all_btn),
         cluster_checkbox
     )
+
+    # --- Average cell-type composition panel for the selected clusters ---
+    comp_div = Div(text="<i>Select one or more cluster(s) to see their cell-type composition.</i>",
+                   width=560, height=460)
+    if cluster_composition is not None:
+        comp_cb = CustomJS(args=dict(checkbox=cluster_checkbox, cluster_ids=cluster_ids,
+                                     comp=cluster_composition, div=comp_div,
+                                     methods=deconv_methods, colordict=colordict),
+            code="""
+            const active = checkbox.active.map(i => cluster_ids[i]);
+            const cts = comp['celltypes'];
+            if (active.length === 0) { div.text = "<i>No cluster selected.</i>"; return; }
+
+            function methodBlock(m, clusterList) {
+                const means = comp['means'][m];
+                const counts = comp['counts'][m];
+                let agg = new Array(cts.length).fill(0);
+                let tw = 0;
+                for (const cl of clusterList) {
+                    const key = String(cl);
+                    if (!(key in means)) continue;
+                    const w = counts[key];
+                    const v = means[key];
+                    for (let j = 0; j < cts.length; j++) { agg[j] += w * v[j]; }
+                    tw += w;
+                }
+                if (tw === 0) return "";
+                for (let j = 0; j < cts.length; j++) { agg[j] /= tw; }
+                let idx = Array.from(cts.keys()).sort((a, b) => agg[b] - agg[a]).slice(0, 4);
+                let h = "<div style='margin-top:2px'><u>" + m + "</u></div>";
+                for (const j of idx) {
+                    const col = colordict[cts[j]] || '#000000';
+                    const pct = (agg[j] * 100).toFixed(0);
+                    h += "<div style='display:flex;align-items:center;margin:1px 0;'>"
+                       + "<div style='width:32px;height:7px;background:#eee;margin-right:3px;border:1px solid #ccc;flex:none;'>"
+                       + "<div style='width:" + Math.min(100, agg[j] * 100) + "%;height:7px;background:" + col + ";'></div></div>"
+                       + "<span style='font-size:9px'>" + cts[j] + " " + pct + "%</span></div>";
+                }
+                return h;
+            }
+            function card(label, clusterList) {
+                let h = "<div style='border:1px solid #bbb;border-radius:4px;padding:4px;width:165px;box-sizing:border-box;'>";
+                h += "<div style='font-weight:bold;font-size:11px;border-bottom:1px solid #ccc;margin-bottom:2px;'>" + label + "</div>";
+                for (const m of methods) { h += methodBlock(m, clusterList); }
+                h += "</div>";
+                return h;
+            }
+
+            // one card per selected cluster + an "Average" card, laid out as a grid
+            let cards = "";
+            for (const cl of active) {
+                let spots = 0;
+                for (const m of methods) { const c = comp['counts'][m][String(cl)]; if (c) { spots = c; break; } }
+                cards += card("Cluster " + cl + " (" + spots + ")", [cl]);
+            }
+            if (active.length > 1) {
+                cards += card("Average (" + active.join(', ') + ")", active);
+            }
+            div.text = "<div style='display:flex;flex-wrap:wrap;gap:6px;max-height:440px;overflow-y:auto;'>" + cards + "</div>";
+        """)
+        cluster_checkbox.js_on_change('active', comp_cb)
 
     text1 = """
         <div style="
@@ -556,14 +617,14 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
             ">
         </div>
         """
-    # Créez le widget Div
+    # Create the Div widget
     info_box = Div(
         text= text1,
         width=700,
         height=200
     )
 
-    # Modifiez les callbacks des boutons pour mettre à jour le texte du Div
+    # Update the button callbacks to refresh the Div text
     show_all_button = Button(label="Show Clusters", width=100, button_type = 'primary')
     show_all_button.js_on_click(CustomJS(args=dict(p=p,  rmsd_plot = rmsd_plot, deconv_plots=deconv_plots, info_box=info_box, text1 = text1), code="""
         p.visible = true;
@@ -625,6 +686,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         show_all_button, *button_methods,
         rmsd_button, download_button , slider,
         cluster_controls,
+        comp_div,
         Spacer(height=20)
     )
 
@@ -646,7 +708,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     )
 
     p.legend.location = "top_right"
-    p.legend.click_policy = "none"  # légende = clé de couleurs ; le filtre est piloté par les boutons Cluster
+    p.legend.click_policy = "none"  # legend = color key; filtering is driven by the Cluster buttons
     p.legend.visible = True
     rmsd_plot.visible = False
 
@@ -678,4 +740,23 @@ if __name__ == "__main__":
     print(f"Deconvolution methods {deconv_methods}")
     nb_spots_samples = processed_data.shape[0]
     print(f"Generating vis with {nb_spots_samples} spots and top {n_largest_cell_types} cells...\n")
-    vis_with_separate_clusters_view(reduced_df=processed_data, image_path=image_path, deconv_methods=deconv_methods, nb_spots_samples=nb_spots_samples, n_largest_cell_types=n_largest_cell_types, output=output_html)
+
+    # Average cell-type composition per cluster and per method (for the info panel)
+    _clusters = pd.read_csv(data_clustered)
+    _clusters = _clusters.set_index(_clusters.columns[0])['BayesSpace']
+    comp_means, comp_counts, comp_celltypes = {}, {}, None
+    for _m, _fp in zip(deconv_methods, norm_weights_filepaths):
+        _props = pd.read_csv(_fp, sep='\t', index_col=0)
+        _props.index.name = None
+        if comp_celltypes is None:
+            comp_celltypes = list(_props.columns)
+        _df = _props.join(_clusters.rename('cluster'), how='inner').dropna(subset=['cluster'])
+        _df['cluster'] = _df['cluster'].astype(int)
+        _grp = _df.groupby('cluster')
+        _means = _grp[comp_celltypes].mean()
+        _cnt = _grp.size()
+        comp_means[_m] = {str(int(c)): [float(v) for v in _means.loc[c].tolist()] for c in _means.index}
+        comp_counts[_m] = {str(int(c)): int(_cnt.loc[c]) for c in _cnt.index}
+    cluster_composition = {'celltypes': comp_celltypes, 'means': comp_means, 'counts': comp_counts}
+
+    vis_with_separate_clusters_view(reduced_df=processed_data, image_path=image_path, deconv_methods=deconv_methods, nb_spots_samples=nb_spots_samples, n_largest_cell_types=n_largest_cell_types, output=output_html, cluster_composition=cluster_composition)

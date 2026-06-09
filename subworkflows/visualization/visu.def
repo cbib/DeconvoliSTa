@@ -1,7 +1,7 @@
 Bootstrap: docker
 From: python:3.11-slim
 
-# Conteneur pour la génération de la visu interactive (sp_visualizer.py).
+# Container for generating the interactive visualization (sp_visualizer.py).
 # Build:  singularity build --fakeroot visu.sif visu.def
 # Run:    singularity exec --bind <data> visu.sif python sp_visualizer.py <args...>
 
