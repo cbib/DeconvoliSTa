@@ -46,7 +46,7 @@ rule run_spatialdwls:
     output:
         output
     singularity:
-        "/scratch/nmoualhi/sif/sp_spatialdwls_cbib.sif" #"docker://csangara/sp_spatialdwls:latest" ; TODO: déplacer vers un emplacement partagé (cbib write / Docker Hub)
+        f"{config.get('sif_dir', 'sif')}/sp_spatialdwls_cbib.sif"  # built from spatialdwls.def; ex docker://csangara/sp_spatialdwls:latest (missing org.Hs.eg.db)
     threads:
         12
     shell:

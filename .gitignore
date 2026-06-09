@@ -76,3 +76,5 @@ res_rctd_cluster/
 github.com/
 none.R
 res/*
+# Personal environment config (cluster-specific paths) - do not commit
+config.env

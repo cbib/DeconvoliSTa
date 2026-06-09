@@ -46,7 +46,7 @@ rule run_rctd:
     output:
         output
     singularity:
-        "/mnt/cbib/RetinRNA/spatial/sp_rctd_latest.sif" #"docker://csangara/sp_rctd:latest"
+        f"{config.get('sif_dir', 'sif')}/sp_rctd_latest.sif"  # put the SIF in $SIF_DIR; ex docker://csangara/sp_rctd:latest
     threads:
         12
     shell:

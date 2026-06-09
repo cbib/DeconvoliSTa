@@ -31,7 +31,7 @@ rule run_nnls:
     output:
         output
     singularity:
-        "/scratch/nmoualhi/sif/sp_nnls_cbib.sif" #"docker://csangara/sp_nnls:latest" ; TODO: déplacer vers un emplacement partagé (cbib write / Docker Hub)
+        f"{config.get('sif_dir', 'sif')}/sp_nnls_cbib.sif"  # built from nnls.def; ex docker://csangara/sp_nnls:latest (missing org.Hs.eg.db)
     threads:
         8 
     shell:
