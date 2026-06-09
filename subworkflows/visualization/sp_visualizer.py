@@ -101,7 +101,7 @@ colordict = {
 # <!                           DATA PREPARATION                              !>
 # <! ------------------------------------------------------------------------!>
 
-def process_data(norm_weights_filepath, st_coords_filepath, data_clustered, deconv_method, n_largest_cell_types, scale_factor):
+def process_data(norm_weights_filepath, st_coords_filepath, data_clustered, deconv_method, n_largest_cell_types, scale_factor, data_clustered2=None):
     # Read spatial deconvolution result CSV file
     norm_weights_df = pd.read_csv(norm_weights_filepath, sep = '\t')
     norm_weights_df.index.name = None
@@ -122,6 +122,11 @@ def process_data(norm_weights_filepath, st_coords_filepath, data_clustered, deco
     data_with_clusters = pd.read_csv(data_clustered)
     clusters_col =  pd.DataFrame(data_with_clusters["BayesSpace"]).set_index(data_with_clusters["Unnamed: 0"])
     merged_df["Cluster"] = clusters_col
+
+    # Optional second clustering (for the Seurat <-> BayesSpace toggle)
+    if data_clustered2 is not None:
+        dwc2 = pd.read_csv(data_clustered2)
+        merged_df["Cluster2"] = pd.DataFrame(dwc2["BayesSpace"]).set_index(dwc2["Unnamed: 0"])
 
 
     # Create df columns with max cell types
@@ -170,6 +175,8 @@ def process_data(norm_weights_filepath, st_coords_filepath, data_clustered, deco
     # SLim down the df by selecting columns of interest only
     columns_of_interest = ['pxl_row_in_fullres', 'pxl_col_in_fullres','Cluster' , "in_tissue"] + [f"{deconv_method}_Deconv_cell{i + 1}_norm_value" for i in range(n_largest_cell_types)] \
         + [f"{deconv_method}_Deconv_cell{i + 1}" for i in range(n_largest_cell_types)]
+    if data_clustered2 is not None:
+        columns_of_interest = columns_of_interest + ['Cluster2']
     reduced_df = merged_df.loc[:, columns_of_interest]
     return reduced_df
 
@@ -212,8 +219,8 @@ def calculate_rmsd(vector1, vector2):
     return math.sqrt(mean_squared_diff)
 
 
-def post_process_data(norm_weights_filepaths, st_coords_filepath, data_clustered, deconv_methods, n_largest_cell_types, scale_factor):
-    norm_weights_dfs = [process_data(props, st_coords_filepath,data_clustered, deconv_methods[index], n_largest_cell_types, scale_factor = scale_factor)\
+def post_process_data(norm_weights_filepaths, st_coords_filepath, data_clustered, deconv_methods, n_largest_cell_types, scale_factor, data_clustered2=None):
+    norm_weights_dfs = [process_data(props, st_coords_filepath,data_clustered, deconv_methods[index], n_largest_cell_types, scale_factor = scale_factor, data_clustered2=data_clustered2)\
                       for index, props  in enumerate(norm_weights_filepaths)]
     processed_data = norm_weights_dfs[0]
     for i in range(1, len(norm_weights_dfs)):
@@ -263,7 +270,7 @@ def post_process_data(norm_weights_filepaths, st_coords_filepath, data_clustered
 # <!                       BOKEH VISUALIZATION                               !>
 # <! ------------------------------------------------------------------------!>
 from bokeh.events import ButtonClick
-from bokeh.models import BoxAnnotation, Label, Plot, Rect, Text, Button, CustomJS, Div,Slider, PanTool, CheckboxButtonGroup
+from bokeh.models import BoxAnnotation, Label, Plot, Rect, Text, Button, CustomJS, Div,Slider, PanTool, CheckboxButtonGroup, RadioButtonGroup
 from bokeh.plotting import figure
 from bokeh.transform import factor_cmap
 from bokeh.layouts import column, row, gridplot,Spacer
@@ -274,7 +281,7 @@ import math
 
     
    
-def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_spots_samples, n_largest_cell_types, output, cluster_composition=None, show_legend=False, show_figure=False):
+def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_spots_samples, n_largest_cell_types, output, cluster_composition=None, clustering_labels=None, show_legend=False, show_figure=False):
     from bokeh.models import LinearColorMapper, ColorBar
     from bokeh.palettes import Viridis256
 
@@ -312,26 +319,32 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         image_source.change.emit();
     """))
 
-    # --- Cluster plot (one scatter renderer per cluster, already O(n_clusters)) ---
+    # --- Cluster plot: a single scatter colored by the ACTIVE clustering (toggleable). ---
+    # Filtering is done via per-spot alpha (like the deconv plots), so the clustering toggle
+    # only needs to swap the per-spot color/cluster fields.
     p = figure(width=900, height=700, title="Clustering results",
                x_axis_label='x', y_axis_label='y')
     p.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
 
-    cluster_source_df = pd.DataFrame({
-        'x': all_x, 'y': all_y,
-        'Cluster': test_df['Cluster'].tolist(),
-        'tooltip_data': test_df['tooltip_data'].tolist()
-    })
-    cluster_renderers = []
-    cluster_ids = []
-    for cluster, group in cluster_source_df.groupby('Cluster'):
-        color = clusters_colordict.get(cluster, '#000000')
-        r = p.scatter(x='x', y='y', size=5, marker="circle", fill_color=color,
-                  line_width=0, source=ColumnDataSource(group),
-                  legend_label=f"Cluster {int(cluster)}")
-        cluster_renderers.append(r)
-        cluster_ids.append(int(cluster))
+    has_two_clusterings = 'Cluster2' in test_df.columns
+    clu0 = [int(c) for c in test_df['Cluster'].tolist()]
+    clu1 = [int(c) for c in (test_df['Cluster2'] if has_two_clusterings else test_df['Cluster']).tolist()]
+    col0 = [clusters_colordict.get(c, '#000000') for c in clu0]
+    col1 = [clusters_colordict.get(c, '#000000') for c in clu1]
+    cluster_source = ColumnDataSource(dict(
+        x=all_x, y=all_y,
+        cluster=clu0[:], cluster_0=clu0, cluster_1=clu1,
+        color=col0[:], color_0=col0, color_1=col1,
+        alpha=[1.0] * n_spots,
+        tooltip_data=test_df['tooltip_data'].tolist()
+    ))
+    p.scatter(x='x', y='y', size=5, marker="circle", fill_color='color',
+              fill_alpha='alpha', line_width=0, source=cluster_source)
     p.add_tools(HoverTool(tooltips="<div style='width:220px'>@tooltip_data{safe}</div>"))
+
+    # cluster ids per clustering (index 0 = primary, 1 = alternative); active = primary
+    cluster_ids_list = [sorted(set(clu0)), sorted(set(clu1))]
+    cluster_ids = cluster_ids_list[0]
 
     # --- Deconv plots: vectorized — 1 source per method, n_largest_cell_types renderers ---
     # Replaces the previous n_spots × n_cell_types individual sources/renderers loop.
@@ -357,7 +370,9 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         source_data = {
             'x': all_x,
             'y': all_y,
-            'cluster': [int(c) for c in test_df['Cluster'].tolist()],
+            'cluster': clu0[:],
+            'cluster_0': clu0,
+            'cluster_1': clu1,
             'alpha': [1.0] * n_spots,
             'tooltip_data': test_df[f"{method}_tooltip_data"].tolist()
         }
@@ -392,7 +407,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
 
     rmsd_source = ColumnDataSource({
         'x': all_x, 'y': all_y,
-        'cluster': [int(c) for c in test_df['Cluster'].tolist()],
+        'cluster': clu0[:], 'cluster_0': clu0, 'cluster_1': clu1,
         'alpha': [1.0] * n_spots,
         'error_value': error_values,
         'error_tooltip_data': test_df['error_tooltip_data'].tolist()
@@ -411,13 +426,15 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     rmsd_plot.visible = False
 
     # --- Cluster filter SHARED across all views (clusters + each method + comparison) ---
-    # A cluster selection applies everywhere (like the zoom). Select/Deselect all buttons.
+    # A cluster selection applies everywhere (like the zoom), via per-spot alpha. Select/Deselect all.
+    # state_src holds the active clustering index (0 = primary, 1 = alternative clustering).
+    state_src = ColumnDataSource(dict(clustering=[0]))
+
     cluster_filter_code = """
-        const active = new Set(checkbox.active.map(i => cluster_ids[i]));
-        for (let k = 0; k < cluster_renderers.length; k++) {
-            cluster_renderers[k].visible = active.has(cluster_ids[k]);
-        }
-        const all_sources = deconv_sources.concat([rmsd_source]);
+        const idx = state_src.data['clustering'][0];
+        const ids = cluster_ids_list[idx];
+        const active = new Set(checkbox.active.map(i => ids[i]));
+        const all_sources = deconv_sources.concat([rmsd_source, cluster_source]);
         for (const s of all_sources) {
             const cl = s.data['cluster'];
             const al = s.data['alpha'];
@@ -426,37 +443,125 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         }
     """
     cluster_checkbox = CheckboxButtonGroup(
-        labels=[f"Cluster {c}" for c in cluster_ids],
-        active=list(range(len(cluster_ids)))
+        labels=[str(c) for c in cluster_ids],
+        active=list(range(len(cluster_ids))),
+        width=300
     )
     cluster_checkbox.js_on_change('active', CustomJS(
         args=dict(checkbox=cluster_checkbox, deconv_sources=deconv_sources,
-                  rmsd_source=rmsd_source, cluster_renderers=cluster_renderers,
-                  cluster_ids=cluster_ids),
+                  rmsd_source=rmsd_source, cluster_source=cluster_source,
+                  cluster_ids_list=cluster_ids_list, state_src=state_src),
         code=cluster_filter_code))
     select_all_btn = Button(label="Select all clusters", width=120, button_type='success')
     select_all_btn.js_on_click(CustomJS(
-        args=dict(checkbox=cluster_checkbox, cluster_ids=cluster_ids),
-        code="checkbox.active = Array.from(Array(cluster_ids.length).keys());"))
+        args=dict(checkbox=cluster_checkbox),
+        code="checkbox.active = Array.from(Array(checkbox.labels.length).keys());"))
     deselect_all_btn = Button(label="Deselect all clusters", width=120, button_type='warning')
     deselect_all_btn.js_on_click(CustomJS(
         args=dict(checkbox=cluster_checkbox),
         code="checkbox.active = [];"))
-    cluster_controls = column(
+
+    # Color key (legend) for the active clustering's clusters
+    def _legend_html(ids):
+        items = "".join(
+            "<div style='display:flex;align-items:center;margin:2px 0;'>"
+            "<div style='width:13px;height:13px;border-radius:3px;background:" + clusters_colordict.get(c, '#000000') +
+            ";border:1px solid rgba(0,0,0,.15);margin-right:7px;'></div>"
+            "<span style='font-size:12px;color:#41463f'>Cluster " + str(c) + "</span></div>"
+            for c in ids)
+        return "<div class='dv-legend'><span class='ttl'>Cluster colors</span>" + items + "</div>"
+    legend_html = [_legend_html(cluster_ids_list[0]), _legend_html(cluster_ids_list[1])]
+    legend_div = Div(text=legend_html[0], width=190)
+
+    cluster_controls_children = [
         Div(text="<b>Clusters</b> (filter applied to all views):", width=320),
         row(select_all_btn, deselect_all_btn),
         cluster_checkbox
-    )
+    ]
 
-    # --- Average cell-type composition panel for the selected clusters ---
-    comp_div = Div(text="<i>Select one or more cluster(s) to see their cell-type composition.</i>",
-                   width=560, height=460)
-    if cluster_composition is not None:
-        comp_cb = CustomJS(args=dict(checkbox=cluster_checkbox, cluster_ids=cluster_ids,
-                                     comp=cluster_composition, div=comp_div,
-                                     methods=deconv_methods, colordict=colordict),
+    # Clustering toggle (only when a second clustering is provided): swaps color + cluster
+    # fields everywhere, rebuilds the cluster buttons, and re-applies the filter/composition.
+    if has_two_clusterings:
+        clustering_toggle = RadioButtonGroup(labels=clustering_labels, active=0)
+        clustering_toggle.js_on_change('active', CustomJS(
+            args=dict(state_src=state_src, cluster_source=cluster_source,
+                      deconv_sources=deconv_sources, rmsd_source=rmsd_source,
+                      cluster_ids_list=cluster_ids_list, checkbox=cluster_checkbox,
+                      legend_div=legend_div, legend_html=legend_html),
             code="""
-            const active = checkbox.active.map(i => cluster_ids[i]);
+            const idx = cb_obj.active;
+            state_src.data['clustering'] = [idx];
+            const suf = '_' + idx;
+            cluster_source.data['color'] = cluster_source.data['color' + suf].slice();
+            cluster_source.data['cluster'] = cluster_source.data['cluster' + suf].slice();
+            for (const s of deconv_sources.concat([rmsd_source])) {
+                s.data['cluster'] = s.data['cluster' + suf].slice();
+            }
+            cluster_source.change.emit();
+            const ids = cluster_ids_list[idx];
+            checkbox.labels = ids.map(c => String(c));
+            legend_div.text = legend_html[idx];
+            checkbox.active = Array.from(Array(ids.length).keys());  // triggers filter + composition
+            """))
+        cluster_controls_children = [Div(text="<b>Clustering:</b>", width=320),
+                                     clustering_toggle] + cluster_controls_children
+
+    cluster_controls = column(*cluster_controls_children)
+
+    # --- Average cell-type composition panel (cards spread across the full width). ---
+    # Initial content is rendered server-side (Python) so the tables show on load, without
+    # needing a first interaction; the CustomJS below updates them on cluster/clustering changes.
+    def _comp_card_html(comp, ids):
+        cts = comp['celltypes']
+        def method_block(m, cl_list):
+            means = comp['means'].get(m, {}); counts = comp['counts'].get(m, {})
+            agg = [0.0] * len(cts); tw = 0
+            for cl in cl_list:
+                key = str(cl)
+                if key not in means: continue
+                w = counts[key]; v = means[key]
+                for j in range(len(cts)): agg[j] += w * v[j]
+                tw += w
+            if tw == 0: return ""
+            agg = [a / tw for a in agg]
+            order = sorted(range(len(cts)), key=lambda j: agg[j], reverse=True)[:4]
+            h = "<div style='margin-top:4px;font-size:10px;color:#0f766e;font-weight:600'>" + m + "</div>"
+            for j in order:
+                col = colordict.get(cts[j], '#000000'); pct = "%.0f" % (agg[j] * 100)
+                h += ("<div style='display:flex;align-items:center;margin:1.5px 0;'>"
+                      "<div style='width:34px;height:7px;border-radius:3px;background:#efece2;margin-right:4px;flex:none;overflow:hidden;'>"
+                      "<div style='width:" + str(min(100, agg[j] * 100)) + "%;height:7px;background:" + col + ";'></div></div>"
+                      "<span style='font-size:9.5px;color:#41463f'>" + cts[j] + " <span class='pct'>" + pct + "%</span></span></div>")
+            return h
+        def card(label, cl_list):
+            h = "<div class='dv-card' style='padding:7px 9px;width:168px;box-sizing:border-box;'>"
+            h += "<div class='hd' style='font-size:11.5px;border-bottom:1px solid #ece7da;padding-bottom:3px;margin-bottom:2px;'>" + label + "</div>"
+            for m in deconv_methods: h += method_block(m, cl_list)
+            return h + "</div>"
+        cards = ""
+        for cl in ids:
+            spots = 0
+            for m in deconv_methods:
+                c = comp['counts'].get(m, {}).get(str(cl))
+                if c: spots = c; break
+            cards += card("Cluster " + str(cl) + " (" + str(spots) + ")", [cl])
+        if len(ids) > 1:
+            cards += card("Average (" + ", ".join(str(c) for c in ids) + ")", ids)
+        return "<div style='display:flex;flex-wrap:wrap;gap:8px;'>" + cards + "</div>"
+
+    _comp_initial = (_comp_card_html(cluster_composition[0], cluster_ids_list[0])
+                     if cluster_composition is not None
+                     else "<i>Select one or more cluster(s) to see their cell-type composition.</i>")
+    comp_div = Div(text=_comp_initial, sizing_mode='stretch_width', height=360)
+    if cluster_composition is not None:
+        comp_cb = CustomJS(args=dict(checkbox=cluster_checkbox, cluster_ids_list=cluster_ids_list,
+                                     comp_list=cluster_composition, div=comp_div,
+                                     methods=deconv_methods, colordict=colordict, state_src=state_src),
+            code="""
+            const idx = state_src.data['clustering'][0];
+            const ids = cluster_ids_list[idx];
+            const comp = comp_list[idx];
+            const active = checkbox.active.map(i => ids[i]);
             const cts = comp['celltypes'];
             if (active.length === 0) { div.text = "<i>No cluster selected.</i>"; return; }
 
@@ -476,20 +581,20 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
                 if (tw === 0) return "";
                 for (let j = 0; j < cts.length; j++) { agg[j] /= tw; }
                 let idx = Array.from(cts.keys()).sort((a, b) => agg[b] - agg[a]).slice(0, 4);
-                let h = "<div style='margin-top:2px'><u>" + m + "</u></div>";
+                let h = "<div style='margin-top:4px;font-size:10px;color:#0f766e;font-weight:600'>" + m + "</div>";
                 for (const j of idx) {
                     const col = colordict[cts[j]] || '#000000';
                     const pct = (agg[j] * 100).toFixed(0);
-                    h += "<div style='display:flex;align-items:center;margin:1px 0;'>"
-                       + "<div style='width:32px;height:7px;background:#eee;margin-right:3px;border:1px solid #ccc;flex:none;'>"
+                    h += "<div style='display:flex;align-items:center;margin:1.5px 0;'>"
+                       + "<div style='width:34px;height:7px;border-radius:3px;background:#efece2;margin-right:4px;flex:none;overflow:hidden;'>"
                        + "<div style='width:" + Math.min(100, agg[j] * 100) + "%;height:7px;background:" + col + ";'></div></div>"
-                       + "<span style='font-size:9px'>" + cts[j] + " " + pct + "%</span></div>";
+                       + "<span style='font-size:9.5px;color:#41463f'>" + cts[j] + " <span class='pct'>" + pct + "%</span></span></div>";
                 }
                 return h;
             }
             function card(label, clusterList) {
-                let h = "<div style='border:1px solid #bbb;border-radius:4px;padding:4px;width:165px;box-sizing:border-box;'>";
-                h += "<div style='font-weight:bold;font-size:11px;border-bottom:1px solid #ccc;margin-bottom:2px;'>" + label + "</div>";
+                let h = "<div class='dv-card' style='padding:7px 9px;width:168px;box-sizing:border-box;'>";
+                h += "<div class='hd' style='font-size:11.5px;border-bottom:1px solid #ece7da;padding-bottom:3px;margin-bottom:2px;'>" + label + "</div>";
                 for (const m of methods) { h += methodBlock(m, clusterList); }
                 h += "</div>";
                 return h;
@@ -505,123 +610,54 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
             if (active.length > 1) {
                 cards += card("Average (" + active.join(', ') + ")", active);
             }
-            div.text = "<div style='display:flex;flex-wrap:wrap;gap:6px;max-height:440px;overflow-y:auto;'>" + cards + "</div>";
+            div.text = "<div style='display:flex;flex-wrap:wrap;gap:8px;'>" + cards + "</div>";
         """)
         cluster_checkbox.js_on_change('active', comp_cb)
 
-    text1 = """
-        <div style="
-            background-color: #f0f0f0;
-            border: 2px solid #3c3c3c;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 14px;
-            line-height: 1.5;
-            color: #333333;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        ">
-            <h3 style="
-                margin-top: 0;
-                color: #2c3e50;
-                font-size: 18px;
-                border-bottom: 1px solid #bdc3c7;
-                padding-bottom: 8px;
-            ">Visualization Infos</h3>
-            <p style="margin-bottom: 0;">
-                This view shows the clusters. Each point represents a spot,
-                    and the colors indicate the different clusters.
-            </p>
-        </div>
-        """
-    text2 = """
-        <div style="
-            background-color: #f0f0f0;
-            border: 2px solid #3c3c3c;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 14px;
-            line-height: 1.5;
-            color: #333333;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        ">
-            <h3 style="
-                margin-top: 0;
-                color: #2c3e50;
-                font-size: 18px;
-                border-bottom: 1px solid #bdc3c7;
-                padding-bottom: 8px;
-            ">Visualization Infos</h3>
-            <p style="margin-bottom: 0;">
-                This visualization shows deconvolution results by cluster.
-                In each spot, celltype proportions are represented with a pie chart
-            </p>
-        </div>
-        """
-    text3 = """
-        <div style="
-            background-color: #f0f0f0;
-            border: 2px solid #3c3c3c;
-            border-radius: 10px;
-            padding: 15px;
-            margin: 10px 0;
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            font-size: 14px;
-            line-height: 1.5;
-            color: #333333;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        ">
-            <h3 style="
-                margin-top: 0;
-                color: #2c3e50;
-                font-size: 18px;
-                border-bottom: 1px solid #bdc3c7;
-                padding-bottom: 8px;
-            ">Visualization Infos</h3>
-            <p style="margin-bottom: 0;">
-                This visualization compares deconvolution results between different methods.
-                When having 2 methods the comparing is based on RMSD metric. However, when
-                using more than 2 methods, for each spot, and for each celltype, standard
-                deviation of deconvolution values among methods is calculated, then the final
-                error value for that spot is the standard deviation of calculated standard
-                    deviations among celltypes
-            </p>
-        </div>
-        """
+    text1 = """<div class="dv-panel"><h3>Clusters view</h3>
+        Each point is a spot, colored by its cluster (spatial domain). Use the
+        <b>Clustering</b> toggle and the <b>Cluster</b> buttons to filter every view.</div>"""
+    text2 = """<div class="dv-panel"><h3>Deconvolution by method</h3>
+        Each spot is a pie chart of its cell-type proportions for the selected method.</div>"""
+    text3 = """<div class="dv-panel"><h3>Method comparison</h3>
+        Spots colored by disagreement between methods &mdash; RMSD for two methods, or the
+        standard deviation of per-cell-type standard deviations for more than two.</div>"""
     title_text = """
-        <div style="
-            background-color: #ffffff;
-            border: 3px solid #2c3e50;
-            border-radius: 15px;
-            padding: 30px;
-            margin: 20px 0;
-            font-family: 'Helvetica', 'Arial', sans-serif;
-            color: #333333;
-            text-align: center;
-            box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-        ">
-            <h1 style="
-                margin-top: 0;
-                font-size: 25px;
-                color: #2c3e50;
-                letter-spacing: 1px;
-                font-weight: bold;
-            ">Spatial Transcriptomics Deconvolution Exploration  Interface</h1>
-            <hr style="
-                width: 80px;
-                border: 2px solid #2c3e50;
-                margin: 10px auto;
-            ">
-        </div>
-        """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap');
+    html, body, .bk-root { background:#f3f1ea !important; }
+    .bk-root { color:#1f2421; }
+    .dv-header { padding:4px 2px 2px; }
+    .dv-header .sub { font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:#0f766e; }
+    .dv-header h1 { font-family:'Fraunces',serif; font-weight:600; font-size:24px; line-height:1.1; letter-spacing:-0.01em; color:#14302b; margin:6px 0 0; }
+    .dv-header .rule { height:3px; width:52px; background:#0f766e; margin-top:11px; border-radius:2px; }
+    .dv-panel { font-family:'IBM Plex Sans',sans-serif; background:#fffdf8; border:1px solid #e6e1d4; border-left:3px solid #0f766e;
+                border-radius:10px; padding:11px 14px; box-shadow:0 1px 3px rgba(20,48,43,.06); font-size:13px; line-height:1.55; color:#41463f; }
+    .dv-panel h3 { font-family:'Fraunces',serif; font-size:14.5px; margin:0 0 5px; color:#14302b; font-weight:600; }
+    .dv-legend { font-family:'IBM Plex Sans',sans-serif; background:#fffdf8; border:1px solid #e6e1d4; border-radius:10px;
+                 padding:11px 13px; box-shadow:0 1px 3px rgba(20,48,43,.06); }
+    .dv-legend .ttl { font-family:'Fraunces',serif; font-weight:600; color:#14302b; font-size:13px; display:block; margin-bottom:7px; }
+    .dv-card { font-family:'IBM Plex Sans',sans-serif; background:#fffdf8; border:1px solid #e6e1d4; border-radius:9px;
+               box-shadow:0 1px 2px rgba(20,48,43,.06); }
+    .dv-card .hd { font-family:'Fraunces',serif; font-weight:600; color:#14302b; }
+    .dv-card .pct { font-family:'IBM Plex Mono',monospace; color:#0f766e; }
+    .bk-btn-primary  { background:#14302b !important; border-color:#14302b !important; color:#f3f1ea !important; }
+    .bk-btn-primary:hover { background:#1f4a42 !important; }
+    .bk-btn-success  { background:#0f766e !important; border-color:#0f766e !important; color:#f3f1ea !important; }
+    .bk-btn-warning  { background:#b45309 !important; border-color:#b45309 !important; color:#f7efe2 !important; }
+    .bk-btn { font-family:'IBM Plex Sans',sans-serif !important; border-radius:7px !important; font-weight:500 !important; }
+    </style>
+    <div class="dv-header">
+        <div class="sub">CBiB &middot; spatial transcriptomics</div>
+        <h1>Deconvolution Exploration Interface</h1>
+        <div class="rule"></div>
+    </div>
+    """
     # Create the Div widget
     info_box = Div(
         text= text1,
-        width=700,
-        height=200
+        width=360,
+        height=130
     )
 
     # Update the button callbacks to refresh the Div text
@@ -672,44 +708,45 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
 
     p.add_tools(TapTool())
 
-    leg = p.legend[0]
-    leg.glyph_height = 20
-    leg.glyph_width = 20
-    leg.label_text_font_size = "15pt"
-    leg.items = sorted(leg.items, key=lambda item: item.label['value'])
-    p.add_layout(leg, 'right')
+    # (no per-cluster Bokeh legend: the cluster plot is a single scatter colored by the
+    #  active clustering; the Cluster buttons act as the legend/control.)
 
-    title_box = Div(text=title_text, width=700, height=100)
+    title_box = Div(text=title_text, width=1100, height=84)
 
-    # Create the row for the buttons and slider
+    # Left column: controls only (view buttons, slider, clustering toggle, cluster filter)
     buttons_col = column(
         show_all_button, *button_methods,
         rmsd_button, download_button , slider,
         cluster_controls,
-        comp_div,
         Spacer(height=20)
     )
 
+    # Sidebar: info + controls (no header, no composition)
     controls_column = column(
-        title_box,
-        Spacer(height = 60),
         info_box,
         buttons_col,
     )
-    plots_column = column(
+    # Center: just the active plot
+    center_column = column(
         p,
         *deconv_plots,
         rmsd_plot,
     )
-    layout = row(
+    # Main row: [sidebar | plot | floating cluster color legend]
+    main_row = row(
         controls_column,
-        plots_column,
-        sizing_mode='stretch_both'  # Stretch both components to fit the available space
+        center_column,
+        legend_div,
+    )
+    # Full-width: header on top, composition as a bottom band (cards spread across the width)
+    layout = column(
+        title_box,
+        main_row,
+        Spacer(height=10),
+        comp_div,
+        sizing_mode='stretch_width'
     )
 
-    p.legend.location = "top_right"
-    p.legend.click_policy = "none"  # legend = color key; filtering is driven by the Cluster buttons
-    p.legend.visible = True
     rmsd_plot.visible = False
 
     if show_figure:
@@ -733,30 +770,39 @@ if __name__ == "__main__":
     scale_factor = float(argv[7])
     output_html = argv[8]
     deconv_methods = argv[9].split(',')
+    # Optional: a second clustering file (argv[10]) + button labels (argv[11], e.g. "Seurat,BayesSpace")
+    data_clustered2 = argv[10] if len(argv) > 10 and argv[10] not in ('', 'none', 'None') else None
+    clustering_labels = argv[11].split(',') if len(argv) > 11 else ["Primary", "Alternative"]
+
     print("Processing data ...\n")
     processed_data = post_process_data(norm_weights_filepaths=norm_weights_filepaths, st_coords_filepath=st_coords_filepath, data_clustered=data_clustered, \
-                                 deconv_methods=deconv_methods, n_largest_cell_types=n_largest_cell_types, scale_factor=scale_factor)
+                                 deconv_methods=deconv_methods, n_largest_cell_types=n_largest_cell_types, scale_factor=scale_factor, data_clustered2=data_clustered2)
 
     print(f"Deconvolution methods {deconv_methods}")
     nb_spots_samples = processed_data.shape[0]
     print(f"Generating vis with {nb_spots_samples} spots and top {n_largest_cell_types} cells...\n")
 
-    # Average cell-type composition per cluster and per method (for the info panel)
-    _clusters = pd.read_csv(data_clustered)
-    _clusters = _clusters.set_index(_clusters.columns[0])['BayesSpace']
-    comp_means, comp_counts, comp_celltypes = {}, {}, None
-    for _m, _fp in zip(deconv_methods, norm_weights_filepaths):
-        _props = pd.read_csv(_fp, sep='\t', index_col=0)
-        _props.index.name = None
-        if comp_celltypes is None:
-            comp_celltypes = list(_props.columns)
-        _df = _props.join(_clusters.rename('cluster'), how='inner').dropna(subset=['cluster'])
-        _df['cluster'] = _df['cluster'].astype(int)
-        _grp = _df.groupby('cluster')
-        _means = _grp[comp_celltypes].mean()
-        _cnt = _grp.size()
-        comp_means[_m] = {str(int(c)): [float(v) for v in _means.loc[c].tolist()] for c in _means.index}
-        comp_counts[_m] = {str(int(c)): int(_cnt.loc[c]) for c in _cnt.index}
-    cluster_composition = {'celltypes': comp_celltypes, 'means': comp_means, 'counts': comp_counts}
+    # Average cell-type composition per cluster and per method (for the info panel), per clustering.
+    def _composition(clustering_file):
+        clu = pd.read_csv(clustering_file)
+        clu = clu.set_index(clu.columns[0])['BayesSpace']
+        means, counts, celltypes = {}, {}, None
+        for _m, _fp in zip(deconv_methods, norm_weights_filepaths):
+            _props = pd.read_csv(_fp, sep='\t', index_col=0)
+            _props.index.name = None
+            if celltypes is None:
+                celltypes = list(_props.columns)
+            _df = _props.join(clu.rename('cluster'), how='inner').dropna(subset=['cluster'])
+            _df['cluster'] = _df['cluster'].astype(int)
+            _grp = _df.groupby('cluster')
+            _means = _grp[celltypes].mean()
+            _cnt = _grp.size()
+            means[_m] = {str(int(c)): [float(v) for v in _means.loc[c].tolist()] for c in _means.index}
+            counts[_m] = {str(int(c)): int(_cnt.loc[c]) for c in _cnt.index}
+        return {'celltypes': celltypes, 'means': means, 'counts': counts}
 
-    vis_with_separate_clusters_view(reduced_df=processed_data, image_path=image_path, deconv_methods=deconv_methods, nb_spots_samples=nb_spots_samples, n_largest_cell_types=n_largest_cell_types, output=output_html, cluster_composition=cluster_composition)
+    comp_primary = _composition(data_clustered)
+    comp_alt = _composition(data_clustered2) if data_clustered2 is not None else comp_primary
+    cluster_composition = [comp_primary, comp_alt]
+
+    vis_with_separate_clusters_view(reduced_df=processed_data, image_path=image_path, deconv_methods=deconv_methods, nb_spots_samples=nb_spots_samples, n_largest_cell_types=n_largest_cell_types, output=output_html, cluster_composition=cluster_composition, clustering_labels=clustering_labels)

@@ -139,11 +139,15 @@ cat("Running deconvolution...\n")
 giotto_obj_spatial <- runDWLSDeconv(giotto_obj_spatial, sign_matrix = signature_matrix)
 
 cat("Printing results...\n")
-deconv_matrix <- as.data.frame(giotto_obj_spatial@spatial_enrichment$DWLS[,-1])
+# The DWLS enrichment table has the spot barcodes in its first column (cell_ID); keep them
+# as row names (other methods output a barcode-indexed table), then drop the cell_ID column.
+dwls <- as.data.frame(giotto_obj_spatial@spatial_enrichment$DWLS)
+deconv_matrix <- dwls[, -1, drop=FALSE]
+rownames(deconv_matrix) <- dwls[[1]]
 
 # Remove all spaces and dots from cell names, sort them
 colnames(deconv_matrix) <- stringr::str_replace_all(colnames(deconv_matrix), "[/ .&-]", "")
-deconv_matrix <- deconv_matrix[,sort(colnames(deconv_matrix), method="shell")]
+deconv_matrix <- deconv_matrix[, sort(colnames(deconv_matrix), method="shell")]
 
-write.table(data.frame(deconv_matrix),
-            file=par$output, sep="\t", quote=FALSE, row.names=FALSE)
+# R-style output (header = cell types, each row = barcode + values), like the other methods
+write.table(deconv_matrix, file=par$output, sep="\t", quote=FALSE, row.names=TRUE)

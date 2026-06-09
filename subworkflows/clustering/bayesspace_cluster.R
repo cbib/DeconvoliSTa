@@ -18,10 +18,10 @@ set.seed(42)
 
 par <- list(sp_input = NA, output = "seurat_metadata.csv",
             q = "auto", qs_min = 3, qs_max = 12, nrep = 10000, burn_in = 1000,
-            n_pcs = 15, n_hvgs = 2000)
+            n_pcs = 15, n_hvgs = 2000, cores = 1)
 args <- R.utils::commandArgs(trailingOnly = TRUE, asValues = TRUE)
 par[names(args)] <- args
-for (k in c("qs_min","qs_max","nrep","burn_in","n_pcs","n_hvgs")) par[[k]] <- as.integer(par[[k]])
+for (k in c("qs_min","qs_max","nrep","burn_in","n_pcs","n_hvgs","cores")) par[[k]] <- as.integer(par[[k]])
 
 # --- Read the spatial object + build the SingleCellExperiment ---
 cat("Reading spatial object from", par$sp_input, "...\n")
@@ -51,7 +51,7 @@ pick_elbow <- function(q, ll) {
 if (identical(tolower(as.character(par$q)), "auto")) {
   qs <- seq(par$qs_min, par$qs_max)
   cat("qTune over q =", min(qs), "..", max(qs), "(may be slow)...\n")
-  sce <- qTune(sce, qs = qs, platform = "Visium", burn.in = par$burn_in, nrep = par$nrep)
+  sce <- qTune(sce, qs = qs, platform = "Visium", burn.in = par$burn_in, nrep = par$nrep, cores = par$cores)
   ll <- attr(sce, "q.logliks")
   q_chosen <- pick_elbow(ll$q, ll$loglik)
   cat("q chosen (elbow) =", q_chosen, "\n")
