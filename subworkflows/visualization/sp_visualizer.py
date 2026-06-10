@@ -119,6 +119,11 @@ def process_data(norm_weights_filepath, st_coords_filepath, data_clustered, deco
 
     merged_df = pd.concat([st_coords_df, norm_weights_df], axis = 1, join = 'inner')
 
+    # Keep the spot barcode as an explicit column so it survives the inter-method
+    # merges in post_process_data (those reset the index); it is needed downstream to
+    # align the full per-spot proportions used by the cell-type heatmap.
+    merged_df["barcode"] = merged_df.index
+
     data_with_clusters = pd.read_csv(data_clustered)
     clusters_col =  pd.DataFrame(data_with_clusters["BayesSpace"]).set_index(data_with_clusters["Unnamed: 0"])
     merged_df["Cluster"] = clusters_col
@@ -173,7 +178,7 @@ def process_data(norm_weights_filepath, st_coords_filepath, data_clustered, deco
         merged_df[''.join([deconv_method, '_Deconv_cell', str(i + 1), '_norm_value'])] =  merged_df[''.join([deconv_method, '_Deconv_cell', str(i + 1), '_value'])] / total
 
     # SLim down the df by selecting columns of interest only
-    columns_of_interest = ['pxl_row_in_fullres', 'pxl_col_in_fullres','Cluster' , "in_tissue"] + [f"{deconv_method}_Deconv_cell{i + 1}_norm_value" for i in range(n_largest_cell_types)] \
+    columns_of_interest = ['barcode', 'pxl_row_in_fullres', 'pxl_col_in_fullres','Cluster' , "in_tissue"] + [f"{deconv_method}_Deconv_cell{i + 1}_norm_value" for i in range(n_largest_cell_types)] \
         + [f"{deconv_method}_Deconv_cell{i + 1}" for i in range(n_largest_cell_types)]
     if data_clustered2 is not None:
         columns_of_interest = columns_of_interest + ['Cluster2']
@@ -281,7 +286,7 @@ import math
 
     
    
-def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_spots_samples, n_largest_cell_types, output, cluster_composition=None, clustering_labels=None, show_legend=False, show_figure=False):
+def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_spots_samples, n_largest_cell_types, output, cluster_composition=None, clustering_labels=None, full_props=None, show_legend=False, show_figure=False):
     from bokeh.models import LinearColorMapper, ColorBar
     from bokeh.palettes import Viridis256
 
@@ -290,6 +295,17 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
 
     test_df = reduced_df[reduced_df["in_tissue"] == 1].head(nb_spots_samples).copy().reset_index(drop=True)
     n_spots = len(test_df)
+
+    # Spot barcodes in plotting order, and the full (all cell types) per-spot proportion
+    # matrix per method, aligned to that order. These feed the clickable cell-type heatmap:
+    # clicking a type in the side panel recolors the active method's map by that type's
+    # abundance. Canonical cell-type list = columns of the first method's proportions.
+    barcodes = test_df['barcode'].tolist() if 'barcode' in test_df.columns else list(test_df.index)
+    all_cell_types = list(full_props[deconv_methods[0]].columns) if full_props else []
+    full_props_ordered = {}
+    if full_props:
+        for _m in deconv_methods:
+            full_props_ordered[_m] = full_props[_m].reindex(index=barcodes, columns=all_cell_types)
 
     all_x = [y/2 for y in test_df.pxl_col_in_fullres.tolist()]
     all_y = [-x/2 for x in test_df.pxl_row_in_fullres.tolist()]
@@ -329,8 +345,38 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     has_two_clusterings = 'Cluster2' in test_df.columns
     clu0 = [int(c) for c in test_df['Cluster'].tolist()]
     clu1 = [int(c) for c in (test_df['Cluster2'] if has_two_clusterings else test_df['Cluster']).tolist()]
-    col0 = [clusters_colordict.get(c, '#000000') for c in clu0]
-    col1 = [clusters_colordict.get(c, '#000000') for c in clu1]
+
+    # Color the ALTERNATIVE clustering so each of its domains keeps the color of the PRIMARY
+    # domain it spatially overlaps most -> a region keeps its color when toggling Seurat<->BayesSpace.
+    # The alternative usually has more clusters; the surplus domains (no primary left to match)
+    # get fresh colors from the rest of the palette (not used by the primary).
+    def _matched_colormap(primary_per_spot, alt_per_spot):
+        from collections import Counter
+        overlap = Counter(zip(alt_per_spot, primary_per_spot))   # (alt, primary) -> shared spots
+        prim_ids = sorted(set(primary_per_spot))
+        alt_ids = sorted(set(alt_per_spot))
+        # greedy one-to-one assignment, strongest overlaps first
+        alt_to_prim, used_prim = {}, set()
+        for (a, pr), _cnt in sorted(overlap.items(), key=lambda kv: -kv[1]):
+            if a in alt_to_prim or pr in used_prim:
+                continue
+            alt_to_prim[a] = pr
+            used_prim.add(pr)
+        used_colors = {clusters_colordict.get(p) for p in prim_ids}
+        reserve = [c for _k, c in sorted(clusters_colordict.items()) if c not in used_colors]
+        cmap, ri = {}, 0
+        for a in alt_ids:
+            if a in alt_to_prim:
+                cmap[a] = clusters_colordict.get(alt_to_prim[a], '#000000')
+            else:
+                cmap[a] = reserve[ri] if ri < len(reserve) else '#000000'
+                ri += 1
+        return cmap
+
+    primary_cmap = {c: clusters_colordict.get(c, '#000000') for c in set(clu0)}
+    alt_cmap = _matched_colormap(clu0, clu1) if has_two_clusterings else primary_cmap
+    col0 = [primary_cmap.get(c, '#000000') for c in clu0]
+    col1 = [alt_cmap.get(c, '#000000') for c in clu1]
     cluster_source = ColumnDataSource(dict(
         x=all_x, y=all_y,
         cluster=clu0[:], cluster_0=clu0, cluster_1=clu1,
@@ -350,6 +396,12 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     # Replaces the previous n_spots × n_cell_types individual sources/renderers loop.
     deconv_plots = []
     deconv_sources = []
+    # Per-method renderers for the cell-type heatmap: the pie wedges (default view) and a
+    # single-circle layer colored by the selected cell type(s) abundance (heatmap view).
+    wedge_renderers = []
+    hm_renderers = []
+    method_pies = []          # per method: K wedge renderers for the "pie of selected types" layer
+    K_PIE = 8                 # max number of cell types shown in a per-spot pie
     for method in deconv_methods:
         test_df[f"{method}_tooltip_data"] = test_df.apply(lambda row: '<br>'.join([
             f"<div style='display:flex;align-items:center;'>"
@@ -383,6 +435,27 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
                 colordict.get(test_df.iloc[i][f'{method}_Deconv_cell{j+1}'], '#000000')
                 for i in range(n_spots)
             ]
+        # Full per-spot proportions for every cell type (for the clickable heatmap), plus the
+        # running heatmap value (sum of the currently selected cell types), updated in JS.
+        if full_props:
+            fpm = full_props_ordered[method]
+            for ct in all_cell_types:
+                source_data['prop_' + ct] = [
+                    round(float(v), 4) if pd.notna(v) else 0.0 for v in fpm[ct].tolist()
+                ]
+            # Single cell-type map: per-spot color (the type's own color) + opacity (its
+            # proportion) + hover text, all filled in by JS when a type is clicked.
+            source_data['hm_color'] = ['#000000'] * n_spots
+            source_data['hm_alpha'] = [0.0] * n_spots
+            source_data['hm_tip'] = [''] * n_spots
+            # "Pie of selected types" layer: K wedges per spot (angles renormalized among the
+            # selected types), one shared opacity per spot. All filled in by JS.
+            source_data['pie_alpha'] = [0.0] * n_spots
+            source_data['pie_tip'] = [''] * n_spots
+            for k in range(K_PIE):
+                source_data[f'pie_start_{k}'] = [0.0] * n_spots
+                source_data[f'pie_end_{k}'] = [0.0] * n_spots
+                source_data[f'pie_color_{k}'] = ['#000000'] * n_spots
         shared_source = ColumnDataSource(source_data)
 
         plot = figure(width=900, height=700, title=f"Deconvolution results - {method}",
@@ -390,15 +463,42 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
                       x_range=p.x_range, y_range=p.y_range)
         plot.image_url(url='url', x='x', y='y', w='w', h='h', alpha='alpha', source=image_source)
 
+        method_wedges = []
         for j in range(n_largest_cell_types):
-            plot.wedge(x='x', y='y', radius=4.7,
-                       start_angle=f'start_{j}', end_angle=f'end_{j}',
-                       fill_color=f'color_{j}', fill_alpha='alpha', line_width=0, source=shared_source)
+            wr = plot.wedge(x='x', y='y', radius=4.7,
+                            start_angle=f'start_{j}', end_angle=f'end_{j}',
+                            fill_color=f'color_{j}', fill_alpha='alpha', line_width=0, source=shared_source)
+            method_wedges.append(wr)
 
-        plot.add_tools(HoverTool(tooltips="<div style='width:220px'>@tooltip_data{safe}</div>"))
+        # Single cell-type layer: each spot drawn in the cell type's own color, opacity ∝ its
+        # proportion at that spot (a "where is this cell type" map). Hidden until a type is clicked.
+        hm_renderer = plot.scatter(x='x', y='y', size=6, marker="circle",
+                                   fill_color='hm_color', fill_alpha='hm_alpha',
+                                   line_width=0, source=shared_source)
+        hm_renderer.visible = False
+
+        # Pie-of-selected-types layer: K wedge renderers, hidden until "pie mode" is on.
+        pie_rends = []
+        for k in range(K_PIE):
+            pr = plot.wedge(x='x', y='y', radius=4.7,
+                            start_angle=f'pie_start_{k}', end_angle=f'pie_end_{k}',
+                            fill_color=f'pie_color_{k}', fill_alpha='pie_alpha',
+                            line_width=0, source=shared_source)
+            pr.visible = False
+            pie_rends.append(pr)
+
+        plot.add_tools(HoverTool(tooltips="<div style='width:220px'>@tooltip_data{safe}</div>",
+                                 renderers=method_wedges))
+        plot.add_tools(HoverTool(tooltips="<div style='width:220px'>@hm_tip{safe}</div>",
+                                 renderers=[hm_renderer]))
+        plot.add_tools(HoverTool(tooltips="<div style='width:240px'>@pie_tip{safe}</div>",
+                                 renderers=pie_rends))
         plot.visible = False
         deconv_plots.append(plot)
         deconv_sources.append(shared_source)
+        wedge_renderers.append(method_wedges)
+        hm_renderers.append(hm_renderer)
+        method_pies.append(pie_rends)
 
     # --- RMSD plot: single vectorized scatter (replaces n_spots individual sources) ---
     error_values = test_df["error_value"].tolist()
@@ -427,8 +527,11 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
 
     # --- Cluster filter SHARED across all views (clusters + each method + comparison) ---
     # A cluster selection applies everywhere (like the zoom), via per-spot alpha. Select/Deselect all.
-    # state_src holds the active clustering index (0 = primary, 1 = alternative clustering).
-    state_src = ColumnDataSource(dict(clustering=[0]))
+    # state_src holds: the active clustering index (0 = primary, 1 = alternative); the active
+    # view ('clusters' | a method index as string | 'compare'); and the list of cell types
+    # selected for the heatmap (stored as a single-cell array to keep CDS columns equal-length).
+    state_src = ColumnDataSource(dict(clustering=[0], view=['clusters'], selected=[[]],
+                                      expanded=[0], pie_mode=[0]))
 
     cluster_filter_code = """
         const idx = state_src.data['clustering'][0];
@@ -462,16 +565,25 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         code="checkbox.active = [];"))
 
     # Color key (legend) for the active clustering's clusters
-    def _legend_html(ids):
+    _card_style = ("background:#fffdf8;border:1px solid #e6e1d4;border-radius:10px;"
+                   "padding:11px 13px;box-shadow:0 1px 3px rgba(20,48,43,.06);"
+                   "font-family:'IBM Plex Sans',sans-serif;")
+    _ttl_style = "font-weight:600;color:#14302b;font-size:13px;display:block;margin-bottom:8px;"
+
+    def _legend_html(ids, cmap):
         items = "".join(
-            "<div style='display:flex;align-items:center;margin:2px 0;'>"
-            "<div style='width:13px;height:13px;border-radius:3px;background:" + clusters_colordict.get(c, '#000000') +
-            ";border:1px solid rgba(0,0,0,.15);margin-right:7px;'></div>"
+            "<div style='display:flex;align-items:center;margin:3px 0;'>"
+            "<div style='width:13px;height:13px;border-radius:3px;background:" + cmap.get(c, '#000000') +
+            ";border:1px solid rgba(0,0,0,.15);margin-right:8px;'></div>"
             "<span style='font-size:12px;color:#41463f'>Cluster " + str(c) + "</span></div>"
             for c in ids)
-        return "<div class='dv-legend'><span class='ttl'>Cluster colors</span>" + items + "</div>"
-    legend_html = [_legend_html(cluster_ids_list[0]), _legend_html(cluster_ids_list[1])]
-    legend_div = Div(text=legend_html[0], width=190)
+        return ("<div style='" + _card_style + "'><span style='" + _ttl_style + "'>Cluster colors</span>"
+                + items + "</div>")
+    legend_html = [_legend_html(cluster_ids_list[0], primary_cmap), _legend_html(cluster_ids_list[1], alt_cmap)]
+    # Context-sensitive panel to the right of the map: the cluster color key on the Clusters
+    # view, and the active method's clickable cell-type composition on a deconvolution view.
+    # Default view is "clusters", so it starts as the cluster legend.
+    side_div = Div(text=legend_html[0], width=248)
 
     cluster_controls_children = [
         Div(text="<b>Clusters</b> (filter applied to all views):", width=320),
@@ -486,8 +598,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         clustering_toggle.js_on_change('active', CustomJS(
             args=dict(state_src=state_src, cluster_source=cluster_source,
                       deconv_sources=deconv_sources, rmsd_source=rmsd_source,
-                      cluster_ids_list=cluster_ids_list, checkbox=cluster_checkbox,
-                      legend_div=legend_div, legend_html=legend_html),
+                      cluster_ids_list=cluster_ids_list, checkbox=cluster_checkbox),
             code="""
             const idx = cb_obj.active;
             state_src.data['clustering'] = [idx];
@@ -500,8 +611,9 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
             cluster_source.change.emit();
             const ids = cluster_ids_list[idx];
             checkbox.labels = ids.map(c => String(c));
-            legend_div.text = legend_html[idx];
-            checkbox.active = Array.from(Array(ids.length).keys());  // triggers filter + composition
+            // resetting the checkbox triggers the cluster filter + side-panel re-render,
+            // which refreshes the legend / composition for the new clustering.
+            checkbox.active = Array.from(Array(ids.length).keys());
             """))
         cluster_controls_children = [Div(text="<b>Clustering:</b>", width=320),
                                      clustering_toggle] + cluster_controls_children
@@ -614,6 +726,206 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         """)
         cluster_checkbox.js_on_change('active', comp_cb)
 
+    # --- Right-of-map interactive panel (legend on Clusters view; clickable composition on a
+    # method view). The rendering logic + cell-type toggle handlers live on `window` so the
+    # HTML rows (built inside a Bokeh Div) can call back into the Bokeh models. They are defined
+    # once (guarded by window.dvInit), capturing the model references from the first callback
+    # that runs; every view/filter callback re-runs window.dvRender(). ---
+    _compare_note = ("<div style='" + _card_style + "'><span style='" + _ttl_style + "'>Method comparison</span>"
+                     "<div style='font-size:11.5px;color:#41463f;line-height:1.5'>Spots are colored by "
+                     "how much the methods disagree (Viridis scale, right of the map). Brighter = less "
+                     "agreement between methods.</div></div>")
+    side_init_js = """
+    if (!window.dvInit) {
+        window.dvState = state_src;
+        window.dvM = {side_div, legend_html, comp_list, cluster_ids_list, checkbox, methods,
+                      colordict, deconv_sources, hm_renderers, wedge_renderers, compare_note,
+                      clustering_labels, method_pies, K_PIE};
+        window.dvToggleCT = function(name) {
+            const sel = window.dvState.data['selected'][0];
+            const k = sel.indexOf(name);
+            if (k >= 0) sel.splice(k, 1); else sel.push(name);
+            window.dvRender();
+        };
+        window.dvClearCT = function() { window.dvState.data['selected'][0] = []; window.dvRender(); };
+        window.dvToggleOthers = function() {
+            const e = window.dvState.data['expanded']; e[0] = e[0] ? 0 : 1; window.dvRender();
+        };
+        window.dvTogglePie = function() {
+            const e = window.dvState.data['pie_mode']; e[0] = e[0] ? 0 : 1; window.dvRender();
+        };
+        window.dvRender = function() {
+            const M = window.dvM, S = window.dvState.data;
+            const cidx = S['clustering'][0], view = S['view'][0], selected = S['selected'][0];
+            const ids = M.cluster_ids_list[cidx];
+            const activeClusters = M.checkbox.active.map(i => ids[i]);
+            // reset every method to its default (per-spot deconvolution pies) view
+            for (let mi = 0; mi < M.methods.length; mi++) {
+                M.hm_renderers[mi].visible = false;
+                for (const w of M.wedge_renderers[mi]) w.visible = true;
+                for (const pr of M.method_pies[mi]) pr.visible = false;
+            }
+            if (view === 'clusters') { M.side_div.text = M.legend_html[cidx]; return; }
+            if (view === 'compare')  { M.side_div.text = M.compare_note; return; }
+
+            const mi = parseInt(view), m = M.methods[mi];
+            const comp = M.comp_list[cidx], cts = comp['celltypes'];
+            const means = comp['means'][m], counts = comp['counts'][m];
+            let agg = new Array(cts.length).fill(0), tw = 0;
+            for (const cl of activeClusters) {
+                const key = String(cl);
+                if (!(key in means)) continue;
+                const w = counts[key], v = means[key];
+                for (let j = 0; j < cts.length; j++) agg[j] += w * v[j];
+                tw += w;
+            }
+            if (tw > 0) for (let j = 0; j < cts.length; j++) agg[j] /= tw;
+            const order = Array.from(cts.keys()).sort((a, b) => agg[b] - agg[a]);
+            const selSet = new Set(selected);
+            const expanded = S['expanded'][0], TOPN = 12;
+
+            // All styling is INLINE (Bokeh renders each Div in its own shadow root, so global
+            // CSS classes would not reach the panel — that is why the swatches went missing).
+            const cardCss = "background:#fffdf8;border:1px solid #e6e1d4;border-radius:10px;"
+                + "padding:11px 13px;box-shadow:0 1px 3px rgba(20,48,43,.06);font-family:'IBM Plex Sans',sans-serif;";
+            const clab = (M.clustering_labels && M.clustering_labels[cidx]) ? M.clustering_labels[cidx] : '';
+            let html = "<div style='" + cardCss + "'>"
+                + "<div style='font-weight:600;color:#14302b;font-size:13px;'>" + m + " &mdash; composition</div>"
+                + "<div style='font-size:10.5px;color:#6b7069;margin:2px 0 8px'>" + clab + " &middot; "
+                + activeClusters.length + "/" + ids.length + " domains &middot; click a type to see its spots</div>";
+            if (selected.length)
+                html += "<div onclick='window.dvClearCT()' style='display:inline-block;font-size:11px;"
+                      + "font-weight:600;color:#b45309;cursor:pointer;margin-bottom:8px'>&times; clear "
+                      + selected.length + " selected</div>";
+            // With >=2 types selected, offer a per-spot pie of the selected types (vs the
+            // dominant-type map). The pie shows their relative balance; opacity = their total.
+            if (selected.length >= 2) {
+                const pm = S['pie_mode'][0];
+                html += "<div onclick='window.dvTogglePie()' style='display:inline-block;font-size:11px;"
+                      + "font-weight:600;color:#0f766e;cursor:pointer;margin:0 0 8px 12px'>"
+                      + (pm ? "&#9632; back to dominant-type map" : "&#9685; create pie chart from selected")
+                      + "</div>";
+            }
+
+            const rowCss = "display:flex;align-items:center;gap:8px;padding:4px 6px;border-radius:6px;cursor:pointer;";
+            function ctRow(j) {
+                const name = cts[j], col = M.colordict[name] || '#000000';
+                const pct = (agg[j] * 100).toFixed(1), on = selSet.has(name);
+                const hl = on ? "background:#eaf2f0;box-shadow:inset 0 0 0 1.5px #0f766e;" : "";
+                return "<div onclick=\\"window.dvToggleCT('" + name + "')\\" style='" + rowCss + hl + "'>"
+                     + "<span style='width:13px;height:13px;border-radius:2px;border:1px solid rgba(0,0,0,.2);"
+                     + "flex:none;background:" + col + "'></span>"
+                     + "<span style='flex:1;min-width:0;font-size:11.5px;color:#2f342e;white-space:nowrap;"
+                     + "overflow:hidden;text-overflow:ellipsis'>" + name + "</span>"
+                     + "<span style='font-family:monospace;font-size:11px;color:#0f766e;flex:none'>" + pct + "%</span></div>";
+            }
+            // Always show the selected types, plus the top TOPN; the rest hide behind "others".
+            const head = order.slice(0, TOPN);
+            const tail = order.slice(TOPN);
+            let rows = "";
+            for (const j of head) rows += ctRow(j);
+            // selected types that fell into the tail stay visible even when collapsed
+            if (!expanded) for (const j of tail) { if (selSet.has(cts[j])) rows += ctRow(j); }
+            if (expanded) for (const j of tail) rows += ctRow(j);
+            html += "<div style='max-height:540px;overflow-y:auto;margin-top:2px'>" + rows + "</div>";
+            if (tail.length > 0) {
+                const lbl = expanded ? "&#9650; show top " + TOPN + " only"
+                                     : "&#9660; show " + tail.length + " more cell types";
+                html += "<div onclick='window.dvToggleOthers()' style='font-size:11px;color:#0f766e;"
+                      + "cursor:pointer;font-weight:600;margin-top:7px;padding:3px 2px'>" + lbl + "</div>";
+            }
+            M.side_div.text = html + "</div>";
+
+            const pieMode = S['pie_mode'][0] && selected.length >= 2;
+            if (pieMode) {
+                // Per-spot pie of the selected types: wedge angles renormalized among the
+                // selected types (relative balance), one opacity per spot = their total
+                // proportion (scaled to the strongest visible spot) -> faint where they are scarce.
+                const src = M.deconv_sources[mi], d = src.data, al = d['alpha'];
+                const n = al.length, TAU = 2 * Math.PI;
+                const nsel = Math.min(selected.length, M.K_PIE), sel = selected.slice(0, nsel);
+                for (let k = 0; k < M.K_PIE; k++) {
+                    const cArr = d['pie_color_' + k], c = (k < nsel) ? (M.colordict[sel[k]] || '#000000') : '#000000';
+                    for (let i = 0; i < n; i++) cArr[i] = c;
+                }
+                const sums = new Array(n); let hi = 0;
+                for (let i = 0; i < n; i++) {
+                    let s = 0; const vals = new Array(nsel);
+                    for (let k = 0; k < nsel; k++) { const arr = d['prop_' + sel[k]]; const v = arr ? arr[i] : 0; vals[k] = v; s += v; }
+                    sums[i] = s;
+                    if (al[i] > 0 && s > hi) hi = s;
+                    let ang = 0;
+                    for (let k = 0; k < nsel; k++) {
+                        const st = d['pie_start_' + k], en = d['pie_end_' + k];
+                        if (s > 0) { st[i] = ang * TAU; ang += vals[k] / s; en[i] = ang * TAU; } else { st[i] = 0; en[i] = 0; }
+                    }
+                    for (let k = nsel; k < M.K_PIE; k++) { d['pie_start_' + k][i] = 0; d['pie_end_' + k][i] = 0; }
+                }
+                if (hi <= 0) hi = 1;
+                const pa = d['pie_alpha'], pt = d['pie_tip'];
+                for (let i = 0; i < n; i++) {
+                    pa[i] = al[i] > 0 ? Math.min(1, sums[i] / hi) : 0;
+                    if (al[i] > 0 && sums[i] > 0) {
+                        let tip = "<b>selected types</b> &mdash; " + (sums[i] * 100).toFixed(1) + "% of this spot<br>";
+                        for (let k = 0; k < nsel; k++) {
+                            const arr = d['prop_' + sel[k]], v = arr ? arr[i] : 0, c = M.colordict[sel[k]] || '#000000';
+                            tip += "<div style='display:flex;align-items:center;'><div style='width:9px;height:9px;background:"
+                                 + c + ";margin-right:5px;'></div>" + sel[k] + ": " + (v * 100).toFixed(1) + "%</div>";
+                        }
+                        pt[i] = tip;
+                    } else pt[i] = '';
+                }
+                src.change.emit();
+                M.hm_renderers[mi].visible = false;
+                for (const w of M.wedge_renderers[mi]) w.visible = false;
+                for (let k = 0; k < M.K_PIE; k++) M.method_pies[mi][k].visible = (k < nsel);
+            } else if (selected.length > 0) {
+                // Spot map: each spot shown in the dominant selected type's OWN color, with opacity
+                // proportional to that type's proportion (scaled to the strongest visible spot).
+                // -> "where is this cell type" rather than a rainbow heatmap.
+                const src = M.deconv_sources[mi], d = src.data;
+                const hc = d['hm_color'], ha = d['hm_alpha'], ht = d['hm_tip'], al = d['alpha'];
+                const best = new Array(al.length), bestv = new Array(al.length);
+                let hi = 0;
+                for (let i = 0; i < al.length; i++) {
+                    let bj = null, bv = 0;
+                    for (const name of selected) { const arr = d['prop_' + name]; const v = arr ? arr[i] : 0; if (v > bv) { bv = v; bj = name; } }
+                    best[i] = bj; bestv[i] = bv;
+                    if (al[i] > 0 && bv > hi) hi = bv;
+                }
+                if (hi <= 0) hi = 1;
+                for (let i = 0; i < al.length; i++) {
+                    if (best[i] === null) { hc[i] = '#000000'; ha[i] = 0; ht[i] = ''; continue; }
+                    const name = best[i], col = M.colordict[name] || '#000000';
+                    hc[i] = col;
+                    ha[i] = al[i] > 0 ? Math.min(1, bestv[i] / hi) : 0;
+                    ht[i] = "<div style='display:flex;align-items:center;'>"
+                          + "<div style='width:10px;height:10px;background:" + col + ";margin-right:5px;'></div>"
+                          + "<span style='color:blue;'>" + name + "</span>: " + (bestv[i] * 100).toFixed(1) + "%</div>";
+                }
+                src.change.emit();
+                M.hm_renderers[mi].visible = true;
+                for (const w of M.wedge_renderers[mi]) w.visible = false;
+            }
+        };
+        window.dvInit = true;
+    }
+    """
+    _side_args = dict(state_src=state_src, side_div=side_div, legend_html=legend_html,
+                      comp_list=(cluster_composition if cluster_composition is not None else []),
+                      cluster_ids_list=cluster_ids_list, checkbox=cluster_checkbox,
+                      methods=deconv_methods, colordict=colordict, deconv_sources=deconv_sources,
+                      hm_renderers=hm_renderers, wedge_renderers=wedge_renderers,
+                      compare_note=_compare_note, method_pies=method_pies, K_PIE=K_PIE,
+                      clustering_labels=(clustering_labels if clustering_labels else ['Primary', 'Alternative']))
+
+    def make_side_cb(set_view_js=""):
+        return CustomJS(args=dict(_side_args), code=side_init_js + set_view_js + "\n window.dvRender();")
+
+    # Re-render the side panel whenever the cluster filter changes (keeps the per-method
+    # average + heatmap scaling in sync with the selected clusters).
+    cluster_checkbox.js_on_change('active', make_side_cb())
+
     text1 = """<div class="dv-panel"><h3>Clusters view</h3>
         Each point is a spot, colored by its cluster (spatial domain). Use the
         <b>Clustering</b> toggle and the <b>Cluster</b> buttons to filter every view.</div>"""
@@ -641,6 +953,17 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
                box-shadow:0 1px 2px rgba(20,48,43,.06); }
     .dv-card .hd { font-family:'Fraunces',serif; font-weight:600; color:#14302b; }
     .dv-card .pct { font-family:'IBM Plex Mono',monospace; color:#0f766e; }
+    .dv-clear { display:inline-block; font-size:11px; font-weight:600; color:#b45309; cursor:pointer; margin:0 0 8px; }
+    .dv-clear:hover { text-decoration:underline; }
+    .dv-ctlist { max-height:564px; overflow-y:auto; margin-right:-5px; padding-right:5px; }
+    .dv-ctlist::-webkit-scrollbar { width:7px; }
+    .dv-ctlist::-webkit-scrollbar-thumb { background:#d8d2c2; border-radius:4px; }
+    .dv-ctrow { display:flex; align-items:center; gap:8px; padding:4px 6px; border-radius:6px; cursor:pointer; transition:background .12s; }
+    .dv-ctrow:hover { background:#f0ede3; }
+    .dv-ctrow.on { background:#eaf2f0; box-shadow:inset 0 0 0 1.5px #0f766e; }
+    .dv-ctrow .sw { width:13px; height:13px; border-radius:2px; border:1px solid rgba(0,0,0,.2); flex:none; }
+    .dv-ctrow .nm { font-size:11.5px; color:#2f342e; flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+    .dv-ctrow .pc { font-family:'IBM Plex Mono',monospace; font-size:11px; color:#0f766e; flex:none; }
     .bk-btn-primary  { background:#14302b !important; border-color:#14302b !important; color:#f3f1ea !important; }
     .bk-btn-primary:hover { background:#1f4a42 !important; }
     .bk-btn-success  { background:#0f766e !important; border-color:#0f766e !important; color:#f3f1ea !important; }
@@ -668,6 +991,8 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         rmsd_plot.visible = false;
         info_box.text = text1;
     """))
+    # Side panel: switch to the cluster legend on the Clusters view.
+    show_all_button.js_on_click(make_side_cb("window.dvState.data['view'] = ['clusters'];"))
     spacer = Spacer(width=50)  # Adjust the width as needed
     button_methods = []
     for index, method in enumerate(deconv_methods):
@@ -679,6 +1004,8 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
             deconv_plots[index].visible = true;
             info_box.text = text2;
         """))
+        # Side panel: show this method's clickable cell-type composition.
+        button.js_on_click(make_side_cb(f"window.dvState.data['view'] = ['{index}'];"))
         button_methods.append(button)
         spacer1 = Spacer(width=150)  # Adjust the width as needed
         button_methods.append(spacer1)
@@ -691,6 +1018,8 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         info_box.text = text3;
 
     """))
+    # Side panel: comparison note (no cluster legend on the compare view).
+    rmsd_button.js_on_click(make_side_cb("window.dvState.data['view'] = ['compare'];"))
 
     download_df = test_df.drop(columns=[col for col in test_df.columns if 'tooltip' in col])
     csv_source = ColumnDataSource({'data': [download_df.to_csv(index=False)]})
@@ -732,11 +1061,12 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         *deconv_plots,
         rmsd_plot,
     )
-    # Main row: [sidebar | plot | floating cluster color legend]
+    # Main row: [sidebar | plot | context panel]. The right panel shows the cluster color key
+    # on the Clusters view, and the active method's clickable cell-type composition otherwise.
     main_row = row(
         controls_column,
         center_column,
-        legend_div,
+        side_div,
     )
     # Full-width: header on top, composition as a bottom band (cards spread across the width)
     layout = column(
@@ -805,4 +1135,11 @@ if __name__ == "__main__":
     comp_alt = _composition(data_clustered2) if data_clustered2 is not None else comp_primary
     cluster_composition = [comp_primary, comp_alt]
 
-    vis_with_separate_clusters_view(reduced_df=processed_data, image_path=image_path, deconv_methods=deconv_methods, nb_spots_samples=nb_spots_samples, n_largest_cell_types=n_largest_cell_types, output=output_html, cluster_composition=cluster_composition, clustering_labels=clustering_labels)
+    # Full (all cell types) per-spot proportions per method, for the clickable cell-type heatmap.
+    full_props = {}
+    for _m, _fp in zip(deconv_methods, norm_weights_filepaths):
+        _fpdf = pd.read_csv(_fp, sep='\t', index_col=0)
+        _fpdf.index.name = None
+        full_props[_m] = _fpdf
+
+    vis_with_separate_clusters_view(reduced_df=processed_data, image_path=image_path, deconv_methods=deconv_methods, nb_spots_samples=nb_spots_samples, n_largest_cell_types=n_largest_cell_types, output=output_html, cluster_composition=cluster_composition, clustering_labels=clustering_labels, full_props=full_props)

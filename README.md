@@ -133,3 +133,14 @@ The pipeline include an interactive visualization tool for deconvolution results
 6. image_path is he path to Visium image of the sample.
 7. scale_factor is the scaling factor to use in order to match pixels coordinates with the Visium image.
 8. deconv_methods is a list of deconvolution methods used in the norm_weights_filepaths files.
+9. data_clustered2 (optional) is a second clustering CSV in the same format (a `BayesSpace` column). When given, the visualization adds a toggle to switch the spatial-domain segmentation on the fly (e.g. Seurat vs BayesSpace). Domains of the second clustering keep the color of the first-clustering domain they spatially overlap most, so a region keeps its color when toggling; surplus domains get fresh colors.
+10. clustering_labels (optional) comma-separated labels for the two clusterings, used on the toggle buttons (e.g. "Seurat,BayesSpace").
+
+### Interactive features
+
+- **View buttons**: per-method deconvolution (each spot is a pie of its top cell-type proportions), method comparison (spots colored by inter-method disagreement), and the clustering view.
+- **Cluster filter** (shared across all views) and the optional **clustering toggle** (see args 9–10).
+- **Right-hand composition panel** (on a method view): the method's average cell-type proportions over the *selected clusters*, as a clickable, color-coded list (top 12 + "show more").
+  - Click one type → the map recolors each spot in that type's own color, opacity proportional to its per-spot proportion ("where is this cell type").
+  - Select several types → **"create pie chart from selected"** draws a per-spot pie of those types (angles = their relative balance, opacity = their total proportion).
+- The BayesSpace clustering input is produced by `subworkflows/clustering/bayesspace_cluster.R` (`--q auto` prints a per-step %-improvement table; the kneedle elbow is only a heuristic and tends to underestimate q on smooth, never-plateauing likelihood curves typical of heterogeneous tissue — pick q from biology, or pass several with `--q "5,9"`).
