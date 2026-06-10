@@ -13,8 +13,6 @@ Minimal dataset for validating that the pipeline runs correctly. Suitable for CI
 | `test_sc_data.rds` | `unit-test/` (repo) | Single-cell reference — 26,252 genes × 1,404 cells. Derived from Allen cortex dataset, genes with < 10 counts filtered out. Annotation column: `subclass` |
 | `test_sp_data.rds` | `unit-test/` (repo) | Spatial data — 26,252 genes × 16 spots. Synthetically generated from `test_sc_data` with `synthspot` (`artificial_uniform_distinct`, seed 10) |
 
-Also available on Apollo at `/mnt/cbib/RetinRNA/spatial/` (`.rds` and `.h5ad` formats).
-
 **Example run with test data:**
 ```bash
 snakemake -s main.smk --config mode="run_dataset" \
@@ -47,49 +45,66 @@ snakemake -s main.smk --config mode="run_dataset" \
   --use-singularity
 ```
 
----
-
-## Singularity images
-
-Pre-built container images required to run each method. Stored on Apollo at `/mnt/cbib/RetinRNA/spatial/`.
-
-| Method | Image on Apollo | Docker Hub fallback |
-|--------|----------------|---------------------|
-| RCTD | `sp_rctd_latest.sif` ✓ | `docker://csangara/sp_rctd:latest` |
-| cell2location | `sp_cell2location_h100.sif` ✓ | `docker://csangara/sp_cell2location:latest` |
-| spatialDWLS | — | `docker://csangara/sp_spatialdwls:latest` |
-| NNLS | — | `docker://csangara/sp_nnls:latest` |
-| DDLS | — | `docker://csangara/sp_ddls:latest` |
-| Dirichlet | — | `docker://csangara/seuratdisk:latest` *(image de conversion utilisée en attendant une image dédiée)* |
-| Seurat | — | *(no .smk file yet — not runnable)* |
-| Evaluation | — | `docker://csangara/sp_eval:latest` |
-| RDS↔H5AD conversion | — | `docker://csangara/seuratdisk:latest` |
-
-> **Note:** Methods without a local `.sif` file will pull from Docker Hub on first run, which is slow and requires internet access. Building local `.sif` files for all methods is recommended for production use on Apollo.
+> Larger real datasets (e.g. a single-cell reference + Visium sample) are not shipped with the
+> repo. Point `sc_input`/`sp_input` at your own `.rds` files; set `annot` to the metadata column
+> holding the cell-type labels of your reference.
 
 ---
 
-## Compute resources (Apollo cluster)
+## Container images
 
-| Method | Partition | Cores | RAM (est.) | Runtime (est.) |
-|--------|-----------|-------|-----------|----------------|
-| RCTD | `compute` | 12 | 32 GB | 7–60 min |
-| cell2location | `gpu` | 8 | 16 GB | 2–4 h |
-| DDLS | `compute` | 12 | 32 GB | 4–12 h |
-| NNLS | `compute` | 8 | 8 GB | < 10 min |
-| spatialDWLS | `compute` | 12 | 16 GB | 15–30 min |
-| Dirichlet | `compute` | 8 | 8 GB | < 10 min |
+Each method runs in its own Singularity/Apptainer container. You can either let Snakemake pull
+the public image from Docker Hub on first run (`--use-singularity`), or build a local `.sif`
+once (faster, works offline) and point the pipeline at it with `sif_dir=<dir>`.
 
-Runtimes measured on real data (~1000 spots, ~10,000 genes). Unit test data runs in seconds.
+| Method | Public image (Docker Hub) | Local build recipe |
+|--------|---------------------------|--------------------|
+| RCTD | `docker://csangara/sp_rctd:latest` | — |
+| cell2location | `docker://csangara/sp_cell2location:latest` | `subworkflows/deconvolution/cell2location/cell2location_cu128.def` (GPU, CUDA 12.8 build) |
+| spatialDWLS | `docker://csangara/sp_spatialdwls:latest` | — |
+| NNLS | `docker://csangara/sp_nnls:latest` | — |
+| DDLS | `docker://abderahim02/sp_ddls:latest` | — |
+| Dirichlet | `docker://csangara/seuratdisk:latest` | — |
+| Evaluation | `docker://csangara/sp_eval:latest` | — |
+| RDS↔H5AD conversion | `docker://csangara/seuratdisk:latest` | — |
+| BayesSpace clustering | — | `subworkflows/clustering/bayesspace.def` |
+| Visualization | — | `subworkflows/visualization/visu.def` |
 
-For cell2location, available GPU MIG types on Apollo:
-- `nvidia_h100_nvl_4g.47gb` — recommended
-- `nvidia_h100_nvl_1g.24gb` — minimum viable
+Build a local image with:
+```bash
+singularity build --fakeroot sp_rctd.sif docker://csangara/sp_rctd:latest
+# or from a .def recipe:
+singularity build --fakeroot visu.sif subworkflows/visualization/visu.def
+```
+
+> **Note:** pulling from Docker Hub on first run is slow and needs internet access. Building
+> local `.sif` files (kept in `SIF_DIR`, see `config.env`) is recommended for repeated runs and
+> for offline/HPC use.
+
+---
+
+## Compute resources (rough estimates)
+
+Indicative figures for sizing SLURM jobs on an HPC cluster. Adjust to your data and hardware.
+
+| Method | Job type | Cores | RAM (est.) | Runtime (est.) |
+|--------|----------|-------|-----------|----------------|
+| RCTD | CPU | 12 | 32 GB | 7–60 min |
+| cell2location | GPU | 8 | 16 GB | 2–4 h |
+| DDLS | GPU | 12 | 32 GB | 4–12 h |
+| NNLS | CPU | 8 | 8 GB | < 10 min |
+| spatialDWLS | CPU | 12 | 16 GB | 15–30 min |
+| Dirichlet | CPU | 8 | 8 GB | < 10 min |
+
+Runtimes measured on real data (~1000 spots, ~10,000 genes). Unit-test data runs in seconds.
+
+GPU methods (cell2location, DDLS) need an NVIDIA GPU and the container's CUDA build to match the
+host driver. If your cluster uses H100 MIG slices, request one via `GPU_GRES` in `config.env`
+(e.g. `gpu:nvidia_h100_nvl_1g.24gb`); a 24 GB slice is enough for the demo data.
 
 ---
 
 ## Known limitations / TODO
 
-- `seurat` is listed as a supported method in `main.smk` but has no `run_seurat.smk` — will fail if selected
-- `use_gpu` is hardcoded to `"false"` in `run_cell2location.smk` — GPU support currently disabled
-- No local `.sif` for spatialDWLS, NNLS, DDLS, Dirichlet, Seurat — Docker Hub pull required
+- `seurat` is listed in `main.smk`'s supported methods but has no `run_seurat.smk` — it will fail if selected.
+- `ICA` and `CytoSPACE` are not integrated yet (planned).

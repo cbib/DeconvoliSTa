@@ -2,8 +2,8 @@ Bootstrap: localimage
 From: sp_cell2location_h100.sif
 
 # Overlay on the lab's cell2location image (sp_cell2location_h100.sif) to replace
-# torch 2.11.0+cu130 (CUDA 13.0, incompatible with the Apollo 570 driver / CUDA
-# 12.8) with the SAME torch 2.11.0 built for CUDA 12.8 (cu128). No other package
+# torch 2.11.0+cu130 (CUDA 13.0, incompatible with 570-series NVIDIA drivers /
+# CUDA 12.8) with the SAME torch 2.11.0 built for CUDA 12.8 (cu128). No other package
 # is touched: scvi-tools / cell2location / lightning stay identical.
 #
 # The base image (sp_cell2location_h100.sif) is the lab's private image, not on a
