@@ -1,41 +1,31 @@
 ## Method parameters
 
+Supported methods in the Snakemake pipeline:
 - [cell2location](#cell2location)
-- [DestVI](#destvi)
-- [MuSiC](#music)
+- [RCTD](#rctd) — no adjustable parameters
 - [Seurat](#seurat)
 - [spatialDWLS](#spatialdwls)
-- [SPOTlight](#spotlight)
-- [stereoscope](#stereoscope)
-- [STRIDE](#stride)
-- [Tangram](#tangram)
+- [NNLS](#nnls) — no adjustable parameters
+- [DDLS](#ddls)
+- [Dirichlet](#dirichlet) — no adjustable parameters
 
-(RCTD and DSTG have no adjustable parameters.)
+### Usage
+Parameters for each method can be provided in `config.yaml` under the `deconv_args` key, with the method name **in lowercase**.
 
-### Usage 
-Parameters for each method can be provided in a *yaml* or *config* file containing a dictionary called `deconv_args`, with the keys being the method name **in lowercase**.
-
-```
-# example.yaml
-# To run: nextflow run main.nf -profile <PROFILE> -params-file example.yaml
-
+```yaml
+# config.yaml
 deconv_args:
-  stereoscope: "-stb 500 -scb 500"
   cell2location:
     build: "-t tech"
     fit: "-p 500"
   spatialdwls: "--n_topmarkers 50"
 ```
 
+Then run the pipeline with:
+```bash
+snakemake -s main.smk --config mode="run_dataset" methods=cell2location,spatialdwls \
+  sc_input="path/to/sc.rds" sp_input="path/to/sp.rds" output="results"
 ```
-// example.config
-// To run: nextflow run main.nf -profile <PROFILE> -c example.config
-
-params.deconv_args = [stereoscope: "-stb 500 -scb 500",
-                      cell2location: [build: "-t tech", fit: "-p 500"],
-                      spatialdwls: "--n_topmarkers 50"]
-```
-Note that `params.sampleID` will automatically be fed to applicable methods once it is given as a pipeline parameter, so there is no need to feed it individually to methods, e.g., through `params.deconv_args.music`. We nonetheless included this information in the parameter list for the sake of completeness.
 
 
 

@@ -8,7 +8,7 @@
 get_expressed_genes <- function(celltype_oi, seurat_obj, annot_col,
                                 assay_oi, pct){
   # Subset expression matrix to contain only celltype of interest
-  cells_oi <- colnames(seurat_obj)[seurat_obj[[annot_col]] == celltype_oi]
+  cells_oi <- colnames(seurat_obj)[seurat_obj[[annot_col, drop=TRUE]] == celltype_oi]
   exprs_mat <- seurat_obj[[assay_oi]]@data %>% .[, cells_oi]
   
   n_cells_oi = ncol(exprs_mat)
@@ -40,7 +40,7 @@ get_downsampled_cells <- function(seurat_obj, annot_col,
                                   target_n_cells){
   index_keep <- sapply(unique(seurat_obj[[annot_col, drop=TRUE]]),
                        function(celltype){
-    indices_oi <- which(seurat_obj[[annot_col]] == celltype)
+    indices_oi <- which(seurat_obj[[annot_col, drop=TRUE]] == celltype)
     n_cells <- min(target_n_cells, length(indices_oi))
     sample(indices_oi, n_cells, replace=FALSE)
   })

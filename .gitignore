@@ -44,10 +44,11 @@ vignettes/*.pdf
 *.h5ad
 *.tsv
 
-#### NEXTFLOW ####
 .cache/*
 .nextflow*
 */work/*
+__pycache__/
+*.pyc
 
 #### SINGULARITY ###
 *.sif
@@ -62,3 +63,21 @@ logs/*
 trace*
 *jpeg
 *png
+
+.snakemake/
+.conda/
+.condarc
+.keras/
+.local/
+rctd_res_cluster/*
+res_rctd_cluster/
+.pybiomart.sqlite
+.theano/
+github.com/
+none.R
+res/*
+# Personal environment config (cluster-specific paths) - do not commit
+config.env
+.continue/
+Rplots.pdf
+res_test/
