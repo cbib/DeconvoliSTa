@@ -39,6 +39,12 @@ spatialdwls_script = "subworkflows/deconvolution/spatialdwls/script.R"
 annot = get_config_var(config, "annot", get_config_var(params, "annot"))
 map_genes = get_config_var(config, "map_genes", "false")
 
+# Use a locally built image if it exists in SIF_DIR, otherwise pull the public one.
+# NB: gene mapping (map_genes=true) needs the org.Hs.eg.db-enabled local build (spatialdwls.def);
+# the public image works for data whose genes already match the reference.
+_local_sif = f"{config.get('sif_dir', 'sif')}/sp_spatialdwls_cbib.sif"
+spatialdwls_image = _local_sif if os.path.exists(_local_sif) else "docker://csangara/sp_spatialdwls:latest"
+
 rule run_spatialdwls:
     input:
         sc_input=sc_input,
@@ -46,7 +52,7 @@ rule run_spatialdwls:
     output:
         output
     singularity:
-        f"{config.get('sif_dir', 'sif')}/sp_spatialdwls_cbib.sif"  # built from spatialdwls.def; ex docker://csangara/sp_spatialdwls:latest (missing org.Hs.eg.db)
+        spatialdwls_image
     threads:
         12
     shell:

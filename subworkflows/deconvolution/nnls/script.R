@@ -4,7 +4,8 @@ library(Seurat)
 library(nnls)
 library(magrittr)
 
-library(org.Hs.eg.db)
+# org.Hs.eg.db is only needed for gene-symbol -> Ensembl mapping (map_genes=true); loaded lazily
+# in that branch so the method runs on images that don't ship it (e.g. the public NNLS image).
 convert_query_geneSymbol_to_ensemblID <- function(spatial_query){
   
   ## Function to convert gene symbols in query to ensemble IDs [e.g. GBMap is in ENSEMBL while Visium is in Symbol]
@@ -51,6 +52,9 @@ if (class(spatial_data) != "Seurat"){
 
 
 if (par$map_genes == 'true'){
+    if (!requireNamespace("org.Hs.eg.db", quietly = TRUE))
+        stop("map_genes=true needs the 'org.Hs.eg.db' package; use the local org.Hs.eg.db-enabled image.")
+    library(org.Hs.eg.db)
     spatial_data = convert_query_geneSymbol_to_ensemblID(spatial_data)
 }
 

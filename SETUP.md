@@ -1,13 +1,16 @@
 # DeconvoliSTa — setup & run
 
 Reproducible benchmarking pipeline for spatial transcriptomics deconvolution
-(Snakemake + Singularity), runnable on any SLURM HPC cluster.
+(Snakemake + Singularity). It **runs locally on a single machine** — no cluster
+required — and can *optionally* be submitted to a SLURM HPC cluster for large or
+GPU jobs.
 
 ## 1. Prerequisites
 
 - **Snakemake** in a conda environment (e.g. `conda create -n snakemake -c bioconda -c conda-forge snakemake`).
 - **Singularity / Apptainer** (runs the per-method container images, including `docker://` ones).
-- A **SLURM** cluster (CPU partition, and a GPU partition for `cell2location` / `ddls` GPU runs).
+- That's all for a local run. *Optional:* a **SLURM** cluster (a CPU partition, and a GPU
+  partition for the `cell2location` / `ddls` GPU runs) if you want to submit batch jobs.
 
 ## 2. Configuration (no hardcoded paths)
 
@@ -42,6 +45,26 @@ singularity build --fakeroot $SIF_DIR/sp_nnls_cbib.sif subworkflows/deconvolutio
 Make sure every `.sif` listed above sits in the `$SIF_DIR` you set in `config.env`.
 
 ## 4. Run
+
+### Quick local run (no cluster)
+
+Run any method directly with Snakemake; Singularity pulls the image on first use.
+The bundled unit-test data runs in seconds and needs no configuration:
+
+```bash
+snakemake -s main.smk -c4 --use-singularity \
+  --config mode="run_dataset" methods="rctd" \
+  sc_input="unit-test/test_sc_data.rds" \
+  sp_input="unit-test/test_sp_data.rds" \
+  output="res" annot="subclass"
+```
+
+Swap `methods=` for any of `rctd, nnls, spatialdwls, dirichlet, cell2location, ddls`
+(comma-separated to run several). Results land in `res/proportions_<method>_*.tsv`.
+For your own data, point `sc_input` / `sp_input` at your `.rds` files and set `annot`
+to the cell-type column of your single-cell reference.
+
+### On a SLURM cluster (optional)
 
 Use the wrapper — it reads `config.env` and submits the right SLURM job:
 

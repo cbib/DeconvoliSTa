@@ -2,7 +2,7 @@
 
 ## Introduction
 
-This document provides documentation for the Snakemake version of Spotless, a spatial deconvolution pipeline. The pipeline was developed by A. Lagraoui, M. Arrieta and S.Karkar et CBIB, Université de Bordeaux, France. Deconvolution can be performed using one or more of the following methods: Cell2location, RCTD, NNLS, SpatialDWLS, DDLS, Seurat, MusiC, and Dirichlet (random).
+This document provides documentation for the Snakemake version of the spotless-benchmark spatial deconvolution pipeline (see `NOTICE` and `LICENSE` for upstream attribution). It was developed at the CBiB, University of Bordeaux, France, by Abderahim Lagraoui, Maialen Arrieta, Enola Missionnier, Slim Karkar and Nejma Moualhi. Deconvolution can be performed with one or more of the following methods: Cell2location, RCTD, NNLS, SpatialDWLS, DDLS, and Dirichlet (a random baseline used as a negative control).
 
 ## Required environment installation
 

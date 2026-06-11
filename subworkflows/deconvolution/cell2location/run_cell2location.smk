@@ -37,6 +37,11 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 convert_script = "subworkflows/deconvolution/convertBetweenRDSandH5AD.R"
 load_model = get_config_var(config, "load_model", "false") == 'true'
 
+# Use a locally built CUDA-12.8 image if present (needed for 570-series GPU drivers),
+# otherwise pull the public cell2location image.
+_local_c2l = f"{config.get('sif_dir', 'sif')}/sp_cell2location_cu128.sif"
+c2l_image = _local_c2l if os.path.exists(_local_c2l) else "docker://csangara/sp_cell2location:latest"
+
 
 if not load_model:
     rule convertBetweenRDSandH5AD:
@@ -66,7 +71,7 @@ if not load_model:
         output:
             temp(f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad")
         singularity:
-            f"{config.get('sif_dir', 'sif')}/sp_cell2location_cu128.sif"  # cu128 torch (CUDA 12.8) for 570-series NVIDIA drivers; cu130 builds are incompatible
+            c2l_image
         threads:
             8
         resources:
@@ -87,7 +92,7 @@ if not load_model:
         output:
             temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
         singularity:
-            f"{config.get('sif_dir', 'sif')}/sp_cell2location_cu128.sif"  # cu128 torch (CUDA 12.8) for 570-series NVIDIA drivers; cu130 builds are incompatible
+            c2l_image
         threads:
             8
         resources:
@@ -127,7 +132,7 @@ else:
         output:
             temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
         singularity:
-            f"{config.get('sif_dir', 'sif')}/sp_cell2location_cu128.sif"  # cu128 torch (CUDA 12.8) for 570-series NVIDIA drivers; cu130 builds are incompatible
+            c2l_image
         threads:
             8
         resources:

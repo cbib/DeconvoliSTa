@@ -4,7 +4,8 @@ library(Seurat)
 library(Giotto)
 library(magrittr)
 
-library(org.Hs.eg.db)
+# org.Hs.eg.db is only needed for gene-symbol -> Ensembl mapping (map_genes=true); loaded lazily
+# in that branch so the method runs on images that don't ship it (e.g. the public spatialDWLS image).
 convert_query_geneSymbol_to_ensemblID <- function(spatial_query){
   
   ## Function to convert gene symbols in query to ensemble IDs [e.g. GBMap is in ENSEMBL while Visium is in Symbol]
@@ -85,6 +86,9 @@ giotto_obj_scRNA <- normalizeGiotto(giotto_obj_scRNA)
 cat("Reading input spatial data from", par$sp_input, "\n")
 spatial_data <- readRDS(par$sp_input)
 if (par$map_genes == 'true'){
+  if (!requireNamespace("org.Hs.eg.db", quietly = TRUE))
+    stop("map_genes=true needs the 'org.Hs.eg.db' package; use the local org.Hs.eg.db-enabled image.")
+  library(org.Hs.eg.db)
   spatial_data = convert_query_geneSymbol_to_ensemblID(spatial_data)
 }
 cat("Converting spatial data to Giotto object...\n")

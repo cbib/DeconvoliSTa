@@ -39,6 +39,11 @@ rctd_script = "subworkflows/deconvolution/rctd/script.R"
 annot = get_config_var(config, "annot", get_config_var(params, "annot"))
 map_genes = get_config_var(config, "map_genes", "false")
 
+# Use a locally built image if it exists in SIF_DIR, otherwise pull the public one.
+# -> the pipeline runs out of the box; build a local .sif only if you want to override.
+_local_sif = f"{config.get('sif_dir', 'sif')}/sp_rctd_latest.sif"
+rctd_image = _local_sif if os.path.exists(_local_sif) else "docker://csangara/sp_rctd:latest"
+
 rule run_rctd:
     input:
         sc_input=sc_input,
@@ -46,7 +51,7 @@ rule run_rctd:
     output:
         output
     singularity:
-        f"{config.get('sif_dir', 'sif')}/sp_rctd_latest.sif"  # put the SIF in $SIF_DIR; ex docker://csangara/sp_rctd:latest
+        rctd_image
     threads:
         12
     shell:

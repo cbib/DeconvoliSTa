@@ -1,9 +1,15 @@
 #!/usr/bin/env Rscript
 Sys.setenv(RETICULATE_MINICONDA_ENABLED = "FALSE")
-library(RCTD)
+# RCTD was renamed to 'spacexr'; load whichever is installed so the script works with both the
+# legacy RCTD image and the current public spacexr image (same function API in both). SpatialRNA
+# is internal in RCTD but exported in spacexr, so resolve it from whichever namespace is loaded.
+.rctd_pkg <- if (requireNamespace("spacexr", quietly = TRUE)) "spacexr" else "RCTD"
+suppressMessages(library(.rctd_pkg, character.only = TRUE))
+SpatialRNA <- get("SpatialRNA", envir = asNamespace(.rctd_pkg))
 library(Matrix)
 library(Seurat)
-library(org.Hs.eg.db)
+# org.Hs.eg.db is only needed for gene-symbol -> Ensembl mapping (map_genes=true); it is loaded
+# lazily there so the method runs on images that don't ship it (e.g. the public RCTD image).
 
 par <- list(
     cell_min = 5
@@ -63,7 +69,7 @@ spatial_data <- readRDS(par$sp_input)
 
 cat("Converting spatial data to SpatialRNA object...\n")
 if (class(spatial_data) != "Seurat"){
-  spatialRNA_obj_visium <- RCTD:::SpatialRNA(counts = spatial_data$counts,
+  spatialRNA_obj_visium <- SpatialRNA(counts = spatial_data$counts,
                                            use_fake_coords = TRUE)
 } else { # If it is Seurat object, check if there is images slot
     use_fake_coords <- length(spatial_data@images) == 0
@@ -72,11 +78,14 @@ if (class(spatial_data) != "Seurat"){
         coords <- GetTissueCoordinates(spatial_data)
     }
     DefaultAssay(spatial_data) <- names(spatial_data@assays)[grep("RNA|Spatial",names(spatial_data@assays))[1]]
-    spatialRNA_obj_visium <- RCTD:::SpatialRNA(coords = coords,
+    spatialRNA_obj_visium <- SpatialRNA(coords = coords,
                                     counts = GetAssayData(spatial_data, slot="counts"),
                                     use_fake_coords = use_fake_coords)
 }
 if (par$map_genes == 'true'){
+    if (!requireNamespace("org.Hs.eg.db", quietly = TRUE))
+        stop("map_genes=true needs the 'org.Hs.eg.db' package; use the local org.Hs.eg.db-enabled image.")
+    library(org.Hs.eg.db)
     spatialRNA_obj_visium = convert_query_geneSymbol_to_ensemblID(spatialRNA_obj_visium)
 }
 

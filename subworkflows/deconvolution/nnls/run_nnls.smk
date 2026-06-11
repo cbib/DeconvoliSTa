@@ -24,6 +24,13 @@ script_dir = os.path.dirname(os.path.abspath(__file__))
 nnls_script = "subworkflows/deconvolution/nnls/script.R"
 annot = config["annot"] if "annot" in config.keys() else params['annot']
 map_genes = config.get("map_genes", "false")
+
+# Use a locally built image if it exists in SIF_DIR, otherwise pull the public one.
+# NB: gene mapping (map_genes=true) needs the org.Hs.eg.db-enabled local build (nnls.def);
+# the public image works for data whose genes already match the reference.
+_local_sif = f"{config.get('sif_dir', 'sif')}/sp_nnls_cbib.sif"
+nnls_image = _local_sif if os.path.exists(_local_sif) else "docker://csangara/sp_nnls:latest"
+
 rule run_nnls:
     input:
         sc_input=sc_input,
@@ -31,7 +38,7 @@ rule run_nnls:
     output:
         output
     singularity:
-        f"{config.get('sif_dir', 'sif')}/sp_nnls_cbib.sif"  # built from nnls.def; ex docker://csangara/sp_nnls:latest (missing org.Hs.eg.db)
+        nnls_image
     threads:
         8 
     shell:
