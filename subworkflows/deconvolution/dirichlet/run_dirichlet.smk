@@ -5,7 +5,7 @@ import yaml
 with open("config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
-# # Fonction pour obtenir le nom de base du fichier sans extension
+# # Function to get the file basename (without extension)
 def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
@@ -18,7 +18,7 @@ method = "dirichlet"
 formatted_output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
 use_gpu = config.get("use_gpu", "false")
 
-# Définir le chemin absolu du script R
+# Absolute path to the R script
 script_dir = os.path.dirname(os.path.abspath(__file__))
 convert_script = "subworkflows/deconvolution/convertBetweenRDSandH5AD.R"
 dirichlet_script = "subworkflows/deconvolution/dirichlet/gen_dirichlet.R"

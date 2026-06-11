@@ -21,15 +21,15 @@ def lire_config_et_former_options(fichier):
     options = []
     with open(fichier, 'r') as file:
         for line in file:
-            # Ignore les lignes vides et les commentaires
+            # Skip empty lines and comments
             line = line.strip()
             if not line or line.startswith('#'):
                 continue
-            # Sépare la clé et la valeur
+            # Split the key and the value
             key, value = line.split(':')
             key = key.strip()
-            value = value.strip().split(' ')[0]  # Ignore les commentaires inline
-            # Formate la clé en option de ligne de commande
+            value = value.strip().split(' ')[0]  # Strip inline comments
+            # Format the key as a command-line option
             option = f"--{key} {value}"
             options.append(option)
     print(' '.join(options))
@@ -47,7 +47,7 @@ def create_file_if_not_exists(file_path):
         os.makedirs(directory)
     if not os.path.exists(file_path):
         with open(file_path, 'w') as f:
-            pass  # Ne rien écrire, juste créer le fichier vide
+            pass  # Write nothing, just create the empty file
 
 def generate_synthetic_data(sc_input, dataset_type, rep, outdir, annot, args=None ):
     output_file = f"{os.path.basename(sc_input).split('.')[0]}_{dataset_type}_rep{rep}.rds"
@@ -67,9 +67,9 @@ def generate_synthetic_data(sc_input, dataset_type, rep, outdir, annot, args=Non
 def list_to_dict(flat_list):
     flat_list[0] = flat_list[0].replace("{", "")
     flat_list[-1] = flat_list[-1].replace("}", "")
-    # Enlever les virgules à la fin de chaque élément
+    # Strip trailing commas from each element
     flat_list = [item.rstrip(',') for item in flat_list]
-    # Créer le dictionnaire à partir des paires clé-valeur
+    # Build the dictionary from the key-value pairs
     result_dict = {}
     for i in range(0, len(flat_list), 2):
         key = flat_list[i].strip()[:-1]
@@ -82,7 +82,7 @@ if __name__ == "__main__":
     import ast
     import os
     import sys  
-    # Récupérer tous les arguments de la ligne de commande
+    # Get all command-line arguments
     args = sys.argv
     config  = list_to_dict(args[1:])
 

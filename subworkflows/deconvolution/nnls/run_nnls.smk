@@ -3,11 +3,11 @@
 import os
 import yaml
 
-# Lire le fichier de configuration YAML
+# Read the YAML configuration file
 with open("config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
-# Fonction pour obtenir le nom de base du fichier sans extension
+# Function to get the file basename (without extension)
 def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
@@ -19,7 +19,7 @@ runID_props = params["runID_props"]
 method = "nnls"
 output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
 deconv_args = params['deconv_args']
-# Définir le chemin absolu du script R
+# Absolute path to the R script
 script_dir = os.path.dirname(os.path.abspath(__file__))
 nnls_script = "subworkflows/deconvolution/nnls/script.R"
 annot = config["annot"] if "annot" in config.keys() else params['annot']

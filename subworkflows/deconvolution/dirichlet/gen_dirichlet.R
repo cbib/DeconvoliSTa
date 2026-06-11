@@ -17,15 +17,15 @@ print(par)
 
 
 generate_dirichlet_dataframe <- function(alpha, rows, columns) {
-  # Vérifier que la longueur de alpha correspond au nombre de colonnes
+  # Check that the length of alpha matches the number of columns
   if (length(alpha) != length(columns)) {
-    stop("La longueur de alpha doit correspondre au nombre de colonnes.")
+    stop("The length of alpha must match the number of columns.")
   }
   
-  # Générer les valeurs selon la distribution de Dirichlet
+  # Generate values from the Dirichlet distribution
   dirichlet_values <- rdirichlet(rows, alpha)
   
-  # Convertir en data.frame et nommer les colonnes
+  # Convert to a data.frame and name the columns
   df <- as.data.frame(dirichlet_values)
   colnames(df) <- columns
   
@@ -33,14 +33,14 @@ generate_dirichlet_dataframe <- function(alpha, rows, columns) {
 }
 
 save_dataframe_to_tsv <- function(df, file_path) {
-  # Sauvegarder le DataFrame dans un fichier TSV
+  # Save the data.frame to a TSV file
   fwrite(df, file_path, sep = "\t")
 }
 
 sp_input <- readRDS(par$sp_input)
 
 
-# Paramètres
+# Parameters
 print(length(sp_input$gold_standard_priorregion$celltype))
 alpha_value = 0.5
 alpha <- rep(alpha_value, length(sp_input$gold_standard_priorregion$celltype))
@@ -48,7 +48,7 @@ rows <- sp_input$counts@Dim[2]
 columns <- sp_input$gold_standard_priorregion$celltype  
 
 
-# Générer le DataFrame et sauvegarder dans un fichier TSV
+# Generate the data.frame and save it to a TSV file
 df <- generate_dirichlet_dataframe(alpha, rows, columns)
 file_path <- par$output  # Spécifiez le chemin de votre fichier de sortie
 
@@ -65,4 +65,4 @@ colnames(df) <- stringr::str_replace_all(colnames(df), "[/ .&-]", "")
 
 save_dataframe_to_tsv(df, file_path)
 
-print("Fichier TSV généré avec succès.")
+print("TSV file generated successfully.")

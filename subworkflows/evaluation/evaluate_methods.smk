@@ -1,11 +1,11 @@
 import os
 import yaml
 
-# Charger le fichier de configuration
+# Load the configuration file
 with open("subworkflows/evaluation/config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
-# Préparez les chemins d'entrée/sortie
+# Prepare the input/output paths
 sc_input = config["sc_input"]
 sp_input = config["sp_input"]
 output_dir = config["output"]
@@ -14,18 +14,18 @@ runID_props = params["runID_props"]
 runID_metrics = params["runID_metrics"]
 # p = params["params"]
 remap_annot = params["params"]["remap_annot"]
-# Fonction pour obtenir le nom de base du fichier sans extension
+# Function to get the file basename (without extension)
 def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
 output_suffix = get_basename(sp_input)
 print("methods evaluate = ", methods)
-# Générer les fichiers de métriques pour chaque méthode
+# Generate the metric files for each method
 metrics_files = [f"{output_dir}/metrics/metrics_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
 output_files = [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
 
 
-# Générer dynamiquement les règles pour chaque méthode
+# Dynamically generate the rules for each method
 for method in methods:
     rule:
         input:

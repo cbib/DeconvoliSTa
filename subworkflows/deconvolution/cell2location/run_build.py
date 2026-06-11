@@ -4,7 +4,7 @@ import configparser
 import yaml
 
 
-# Lire le fichier de configuration YAML
+# Read the YAML configuration file
 with open("subworkflows/deconvolution/cell2location/config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
@@ -34,7 +34,7 @@ def build_cell2location_model(sc_input, sp_input, output_dir, use_gpu, annot):
 if __name__ == "__main__":
     import os
     import sys  
-    # Récupérer tous les arguments de la ligne de commande
+    # Get all command-line arguments
     args = sys.argv
     sc_input  = args[1]
     sp_input  = args[2]

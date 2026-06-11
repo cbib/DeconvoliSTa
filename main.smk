@@ -2,11 +2,11 @@ import os
 import sys
 import yaml
 
-# Lire le fichier de configuration YAML
+# Read the YAML configuration file
 with open("config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
-# Fonction pour obtenir le nom de base du fichier sans extension
+# Function to get the file basename (without extension)
 def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
@@ -20,7 +20,7 @@ def get_config_var(config, var_name, default=None):
             return default
     return config[var_name]
 
-# Charger les paramètres de configuration nécessaires
+# Load the required configuration parameters
 
 mode = get_config_var(config, "mode")
 synthspot_types_map = {

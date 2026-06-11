@@ -3,11 +3,11 @@ import subprocess
 import configparser
 import yaml
 
-# Fonction pour obtenir le nom de base du fichier sans extension
+# Function to get the file basename (without extension)
 def get_basename(file_path):
     return os.path.splitext(os.path.basename(file_path))[0]
 
-# # Lire le fichier de configuration YAML
+# # Read the YAML configuration file
 with open("subworkflows/deconvolution/cell2location/config.yaml", "r") as config_file:
     params = yaml.safe_load(config_file)
 
@@ -47,7 +47,7 @@ def format_tsv(input_file, output_file, params):
 if __name__ == "__main__":
     import os
     import sys  
-    # Récupérer tous les arguments de la ligne de commande
+    # Get all command-line arguments
     args = sys.argv
     sp_input  = args[1]
     model = args[2]
