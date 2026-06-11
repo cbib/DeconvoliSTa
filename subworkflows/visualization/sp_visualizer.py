@@ -310,6 +310,18 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
     all_x = [y/2 for y in test_df.pxl_col_in_fullres.tolist()]
     all_y = [-x/2 for x in test_df.pxl_row_in_fullres.tolist()]
 
+    # Pie-glyph radius scaled to the ACTUAL spot spacing (median nearest-neighbour distance), so
+    # the pies are sized right whatever the image resolution / scale_factor. A hardcoded radius
+    # made the pies huge and overlapping on low-resolution images (e.g. an embedded lowres image).
+    _xy = np.column_stack([all_x, all_y])
+    if len(_xy) > 1:
+        _samp = _xy[np.random.RandomState(0).choice(len(_xy), min(300, len(_xy)), replace=False)]
+        _d = np.sqrt(((_samp[:, None, :] - _xy[None, :, :]) ** 2).sum(-1))
+        _d[_d == 0] = np.inf
+        wedge_radius = float(np.median(_d.min(axis=1))) * 0.5
+    else:
+        wedge_radius = 4.7
+
     test_df['tooltip_data'] = test_df.apply(
         lambda row: f"<span style='color: red;'> Spot</span> : (x = {row['pxl_col_in_fullres']/2:.2f}, y = {-row['pxl_row_in_fullres']/2:.2f})",
         axis=1)
@@ -465,7 +477,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
 
         method_wedges = []
         for j in range(n_largest_cell_types):
-            wr = plot.wedge(x='x', y='y', radius=4.7,
+            wr = plot.wedge(x='x', y='y', radius=wedge_radius,
                             start_angle=f'start_{j}', end_angle=f'end_{j}',
                             fill_color=f'color_{j}', fill_alpha='alpha', line_width=0, source=shared_source)
             method_wedges.append(wr)
@@ -480,7 +492,7 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         # Pie-of-selected-types layer: K wedge renderers, hidden until "pie mode" is on.
         pie_rends = []
         for k in range(K_PIE):
-            pr = plot.wedge(x='x', y='y', radius=4.7,
+            pr = plot.wedge(x='x', y='y', radius=wedge_radius,
                             start_angle=f'pie_start_{k}', end_angle=f'pie_end_{k}',
                             fill_color=f'pie_color_{k}', fill_alpha='pie_alpha',
                             line_width=0, source=shared_source)

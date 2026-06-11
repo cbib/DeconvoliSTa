@@ -1,7 +1,13 @@
-# Rule: generate_vis
+# Mode: `generate_vis` (manual visualization)
 
-## Purpose  
-Builds an interactive HTML report overlaying deconvolution proportions on a Visium image and displaying spot clustering.
+> **In most cases you do not need this mode.** Running `run_dataset` with `do_visu="true"` builds
+> the visualization automatically — it extracts the image/coordinates/scale factor from the spatial
+> object and computes the clustering for you (see `docs/run_dataset.md` / `SETUP.md`). Use
+> `generate_vis` only when you already have the proportions, image, coordinates and a clustering as
+> separate files and want to (re)build the HTML from them.
+
+## Purpose
+Builds an interactive HTML report overlaying deconvolution proportions on a Visium image and displaying spot clustering, from pre-computed inputs.
 
 ### Required configuration
 | Key                        | Type    | Example                                  |
@@ -23,7 +29,7 @@ Builds an interactive HTML report overlaying deconvolution proportions on a Visi
 
 ### Example
 ```bash
-snakemake -s generate_vis.smk \
+snakemake -s main.smk \
   --config mode="generate_vis" sp_input="UKF243_T_ST_1_raw.rds" output="vis_output" \
   norm_weights_filepaths="props_rctd.tsv,props_cell2location.tsv" \
   st_coords_filepath="tissue_positions_list_243.csv" data_clustered="seurat_metadata.csv" \

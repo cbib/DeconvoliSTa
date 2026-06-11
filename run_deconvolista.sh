@@ -25,10 +25,14 @@ conda activate "$CONDA_ENV"
 
 cd "$DECONVOLISTA_DIR"
 
-# Shared config, reused by the auto-unlock and the run
+# Shared config, reused by the auto-unlock and the run.
+# NB: this is the CPU batch (use_gpu=false, CPU partition). The default method list is
+# therefore the CPU methods only. The GPU methods have their own GPU job scripts
+# (./launch.sh run_cell2location_gpu.sh and ./launch.sh run_ddls_gpu.sh, use_gpu=true on
+# the GPU partition) -- do NOT add cell2location/ddls here or they would run on CPU.
 CONFIG=(
     mode="run_dataset"
-    methods="${METHODS:-rctd,cell2location,nnls,spatialdwls,dirichlet,ddls}"
+    methods="${METHODS:-rctd,nnls,spatialdwls,dirichlet}"
     sc_input="${SC_INPUT:-unit-test/test_sc_data.rds}"
     sp_input="${SP_INPUT:-unit-test/test_sp_data.rds}"
     output="$OUTPUT_DIR"
@@ -38,6 +42,8 @@ CONFIG=(
     annot="${ANNOT:-subclass}"
     map_genes="false"
     load_model="false"
+    do_visu="${DO_VISU:-false}"
+    bayes_q="${BAYES_Q:-auto}"
 )
 
 # Auto-unlock (sequential jobs): avoids LockException after a scancel

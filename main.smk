@@ -59,19 +59,25 @@ if mode == "run_dataset":
     runID_props = get_config_var(params, "runID_props")
     include: "subworkflows/deconvolution/run_methods.smk"
     output_dir = get_config_var(config, "output")
+    do_visu = get_config_var(config, "do_visu", "false")
 
     output_files = [f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
+    main_inputs = list(output_files)
+
     if skip_metrics == "false":
         include: "subworkflows/evaluation/evaluate_methods.smk"
         metrics_files = [f"{output_dir}/metrics/metrics_{method}_{output_suffix}{runID_props}.tsv" for method in methods]
-        rule main:
-            input:
-                output_files,
-                metrics_files
-    else:
-        rule main:
-            input:
-                output_files
+        main_inputs += metrics_files
+
+    # do_visu=true: from the spatial Seurat object, chain BayesSpace clustering + tissue
+    # image/coordinate extraction + the interactive HTML (no manually-prepared inputs).
+    if do_visu == "true":
+        include: "subworkflows/visualization/auto_visualize.smk"
+        main_inputs += [_html]
+
+    rule main:
+        input:
+            main_inputs
 elif mode == "generate_data":
     sc_input = get_config_var(config, "sc_input")
     dataset_types = [synthspot_types_map[t] for t in get_config_var(config, "dataset_type").split(',')]

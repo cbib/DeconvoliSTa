@@ -1,4 +1,4 @@
-#  DeconvolisSTa **Deconvol**ut**i**on of **S**patial **T**ranscriptomics d**A**ta
+#  DeconvoliSTa — **Deconvol**ut**i**on of **S**patial **T**ranscriptomics d**A**ta
 
 ## Introduction
 
@@ -31,10 +31,25 @@ Here are some execution times for synthetic data.
 
 ## Pipeline running
 
+**New here? Start with [SETUP.md](/SETUP.md)** — it walks you through the two tools to install,
+running the bundled test data in seconds, and running on your own data (with or without the
+visualization), locally or on a SLURM cluster.
+
+**Quick start** (no config, no cluster — the method's container image is pulled automatically):
+```bash
+snakemake -s main.smk -c4 --use-singularity \
+  --config mode="run_dataset" methods="rctd" \
+  sc_input="unit-test/test_sc_data.rds" sp_input="unit-test/test_sp_data.rds" \
+  output="res" annot="subclass"
+```
+→ writes `res/proportions_rctd_*.tsv` (rows = spots, columns = cell types). Swap `methods=` for any
+of `rctd, cell2location, nnls, spatialdwls, ddls, dirichlet`. Add **`do_visu="true"`** to also build
+the interactive visualization (spot clustering + HTML) in the same run.
+
 ### Documentation for each mode
-   - [run_dataset](/docs/run_dataset.md)  
-   - [generate_data](/docs/generate_data.md)  
-   - [generate_vis](/docs/generate_vis.md)
+   - [run_dataset](/docs/run_dataset.md) — deconvolution (+ optional visualization with `do_visu`)
+   - [generate_data](/docs/generate_data.md) — synthetic dataset generation
+   - [generate_vis](/docs/generate_vis.md) — manual visualization (advanced)
 
 
 
@@ -45,6 +60,9 @@ Here are some execution times for synthetic data.
 | `use_gpu` | `"false"` | Enables GPU acceleration for supported methods (requires Singularity + CUDA). |
 | `annot` | `"subclass"` | Column name in the single‑cell metadata that contains cell‑type annotations. |
 | `map_genes` | `"false"` | Set to `"true"` if gene names differ between scRNA and spatial data. |
+| `do_visu` | `"false"` | `"true"` → after deconvolution, automatically extract the tissue image/coords from the spatial object, cluster the spots (BayesSpace + Seurat) and build the interactive HTML. Needs `sp_bayesspace.sif` + `visu.sif` (see SETUP.md). |
+| `bayes_q` | `"auto"` | Number of BayesSpace spatial domains (`"auto"` runs qTune, or an integer). |
+| `seurat_res` | `"0.8"` | Seurat clustering resolution (higher → more clusters). |
 | `load_model` | `"false"` | If `"true"`, Cell2location skips the model‑building step and loads a pre‑trained model from `model_path`. |
 | `model_path` | – | Path to a pre‑built Cell2location model (used only when `load_model=true`). |
 
