@@ -1,0 +1,29 @@
+DeconvoliSTa
+============
+
+DeconvoliSTa is a Snakemake-based spatial-transcriptomics deconvolution
+benchmark pipeline with an interactive visualization, developed at the
+Centre de Bioinformatique de Bordeaux (CBiB), University of Bordeaux, France.
+
+Derived work
+------------
+DeconvoliSTa is derived from and extends the spotless-benchmark project:
+
+    spotless-benchmark — Chananchida Sang-aram et al.
+    https://github.com/csangara/spotless-benchmark
+
+The original work is reused under the terms of the MIT License, retained in
+full in the LICENSE file (Copyright (c) 2022 Chananchida Sang-aram). The MIT
+copyright and permission notice must be preserved in all copies and
+derivatives, including this one.
+
+Contributors (CBiB, University of Bordeaux)
+-------------------------------------------
+The Nextflow-to-Snakemake port, HPC deployment of the deconvolution methods,
+BayesSpace spatial clustering and the interactive Bokeh visualization were
+added on top of the original pipeline by:
+
+    Abderahim Lagraoui
+    M. Arrieta
+    Slim Karkar
+    Nejma Moualhi

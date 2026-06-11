@@ -50,7 +50,7 @@ columns <- sp_input$gold_standard_priorregion$celltype
 
 # Generate the data.frame and save it to a TSV file
 df <- generate_dirichlet_dataframe(alpha, rows, columns)
-file_path <- par$output  # Spécifiez le chemin de votre fichier de sortie
+file_path <- par$output  # path to the output file
 
 # Remove all spaces and dots from cell names, sort them
 colnames(df) <- stringr::str_replace_all(colnames(df), "[/ .&-]", "")
