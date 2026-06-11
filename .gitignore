@@ -79,3 +79,5 @@ res/*
 # Personal environment config (cluster-specific paths) - do not commit
 config.env
 .continue/
+Rplots.pdf
+res_test/
