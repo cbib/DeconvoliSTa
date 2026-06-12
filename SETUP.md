@@ -63,25 +63,35 @@ to the cell-type column of your single-cell reference.
 ### On a SLURM cluster (optional)
 
 `launch.sh` reads `config.env` and submits the right SLURM job (correct partition, GPU, logs).
-A single SLURM job runs on a single partition, so the methods are split by hardware:
 
+**The easy way — `run_all.sh` (you choose the methods, it does the rest):**
 ```bash
-./launch.sh run_deconvolista.sh        # CPU methods (rctd, nnls, spatialdwls, dirichlet) on the CPU partition
-./launch.sh run_cell2location_gpu.sh   # cell2location on the GPU partition
-./launch.sh run_ddls_gpu.sh            # ddls on the GPU partition
-./run_all.sh                           # all of the above at once (CPU + GPU jobs), one command
-```
-
-Override inputs/methods/options on the fly (env vars are forwarded to the job via `--export=ALL`):
-
-```bash
-METHODS=rctd,nnls,dirichlet ./launch.sh run_deconvolista.sh
 SC_INPUT=my_ref.rds SP_INPUT=my_sample.rds ANNOT=cell_type ./run_all.sh
-DO_VISU=true SC_INPUT=ref.rds SP_INPUT=sample.rds ANNOT=cell_type ./launch.sh run_deconvolista.sh
 ```
+Pick any set of methods with `METHODS=` and `run_all` **routes each one to the right hardware**
+(CPU vs GPU), runs them **in parallel**, then submits a **visualization job that waits for them all**
+(SLURM `--dependency=afterok`) and builds the HTML over exactly those methods:
+```bash
+METHODS=cell2location            ... ./run_all.sh   # just one method
+METHODS=rctd,cell2location       ... ./run_all.sh   # any subset
+DO_VISU=false METHODS=rctd       ... ./run_all.sh   # proportions only, no visualization
+```
+Knobs: `METHODS` (default `rctd,nnls,spatialdwls,cell2location,ddls`), `DO_VISU` (default `true`),
+`BAYES_Q`. Track with `squeue -u $USER`.
+
+**Or submit jobs individually** (a single SLURM job runs on a single partition, so CPU and GPU
+methods are separate scripts):
+```bash
+DO_VISU=true METHODS=rctd,nnls,spatialdwls ./launch.sh run_deconvolista.sh  # CPU methods (+ visu)
+./launch.sh run_cell2location_gpu.sh                                        # cell2location on GPU
+./launch.sh run_ddls_gpu.sh                                                 # ddls on GPU
+```
+
+Env vars are forwarded to the job (`--export=ALL`), so any config option can be overridden on the
+fly (`METHODS`, `SC_INPUT`, `SP_INPUT`, `ANNOT`, `DO_VISU`, `BAYES_Q`, …).
 
 Results are written to `$OUTPUT_DIR` (one `proportions_<method>_*.tsv` per method, plus the
-`visualization/` folder when `do_visu=true`, and metrics when `skip_metrics=false`).
+`visualization/` folder when the visualization runs, and metrics when `skip_metrics=false`).
 
 ## 5. Interactive visualization
 

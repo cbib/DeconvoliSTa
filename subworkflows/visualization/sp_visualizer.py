@@ -268,6 +268,9 @@ def post_process_data(norm_weights_filepaths, st_coords_filepath, data_clustered
       weights_gathered["error_value"] = weights_gathered.apply(lambda row : comparing_value_rmsd(row), axis = 1)
     elif len(deconv_methods) > 2:
       weights_gathered["error_value"] = weights_gathered.apply(lambda row : comparing_value_stdev(row), axis = 1)
+    else:
+      # A single method: no inter-method comparison possible -> flat error (the "Compare" view is moot).
+      weights_gathered["error_value"] = 0.0
     processed_data["error_value"] = weights_gathered["error_value"]
     return processed_data
 
