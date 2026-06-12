@@ -53,6 +53,8 @@ snakemake -s main.smk -c 8 \
     --use-singularity \
     --singularity-args "--bind $DATA_BIND --bind $OUTPUT_DIR" \
     --keep-going
+status=$?
 
 echo '########################################'
 echo 'Job finished' $(date --iso-8601=seconds)
+exit $status

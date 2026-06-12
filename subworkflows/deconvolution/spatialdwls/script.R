@@ -43,7 +43,8 @@ par <- list(
 
   # Downsampling cells
   downsample_cells = TRUE, # If dense matrix is too big, downsample cells
-  target_n_cells = 10000,  # Max no. of cells per cell type
+  target_n_cells = 2000,   # Max cells per cell type when downsampling a large reference
+                           # (10000 left ~217k cells x ~17k genes > 2^31 on a big atlas like GBMap)
 
   # Downsampling genes
   downsample_genes = TRUE, # If dense matrix is too big, downsample genes

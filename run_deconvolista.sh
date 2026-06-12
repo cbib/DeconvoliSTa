@@ -54,6 +54,8 @@ snakemake -s main.smk -c 12 \
     --use-singularity \
     --singularity-args "--bind $DATA_BIND --bind $OUTPUT_DIR" \
     --keep-going
+status=$?     # propagate Snakemake's exit code so SLURM marks the job failed (afterok dependents
 
 echo '########################################'
 echo 'Job finished' $(date --iso-8601=seconds)
+exit $status
