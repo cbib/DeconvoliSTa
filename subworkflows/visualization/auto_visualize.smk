@@ -18,7 +18,7 @@ _seurat_cl  = f"{_vis_dir}/clustering_seurat.csv"       # transcriptomic cluster
 _html       = f"{_vis_dir}/{output_suffix}_visualization.html"
 
 _bayes_q   = get_config_var(config, "bayes_q", "auto")
-_seurat_res = get_config_var(config, "seurat_res", "0.8")
+_seurat_res = get_config_var(config, "seurat_res", "0.5")   # lower -> fewer, broader clusters
 _n_largest = get_config_var(config, "n_largest_cell_types", "5")
 
 _bayes_sif = f"{config.get('sif_dir', 'sif')}/sp_bayesspace.sif"

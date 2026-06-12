@@ -72,7 +72,11 @@ cat("Found ", ncelltypes, "cell types in the reference.\n")
 
 if (prod(dim(seurat_obj_scRNA)) > 2**31){
   cat("Reference is too large.\n")
-  source(paste0(par$rootdir, "/subworkflows/deconvolution/downsampleMatrix.R"))
+  # Snakemake runs from the repo root, so source via a path relative to it (the old
+  # paste0(par$rootdir, ...) gave an absolute "/subworkflows/..." when rootdir was unset).
+  .dsm <- if (!is.null(par$rootdir)) file.path(par$rootdir, "subworkflows/deconvolution/downsampleMatrix.R")
+          else "subworkflows/deconvolution/downsampleMatrix.R"
+  source(.dsm)
 }
 
 cat("Converting to Giotto object and preprocessing...\n")

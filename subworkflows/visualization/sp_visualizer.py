@@ -613,7 +613,8 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
         clustering_toggle.js_on_change('active', CustomJS(
             args=dict(state_src=state_src, cluster_source=cluster_source,
                       deconv_sources=deconv_sources, rmsd_source=rmsd_source,
-                      cluster_ids_list=cluster_ids_list, checkbox=cluster_checkbox),
+                      cluster_ids_list=cluster_ids_list, checkbox=cluster_checkbox,
+                      side_div=side_div, legend_html=legend_html),
             code="""
             const idx = cb_obj.active;
             state_src.data['clustering'] = [idx];
@@ -623,12 +624,19 @@ def vis_with_separate_clusters_view(reduced_df, image_path, deconv_methods, nb_s
             for (const s of deconv_sources.concat([rmsd_source])) {
                 s.data['cluster'] = s.data['cluster' + suf].slice();
             }
-            cluster_source.change.emit();
             const ids = cluster_ids_list[idx];
             checkbox.labels = ids.map(c => String(c));
-            // resetting the checkbox triggers the cluster filter + side-panel re-render,
-            // which refreshes the legend / composition for the new clustering.
             checkbox.active = Array.from(Array(ids.length).keys());
+            // Show all clusters of the new clustering. We do the filter + the legend refresh
+            // EXPLICITLY here: setting checkbox.active does NOT fire its change event when the
+            // two clusterings have the same number of clusters, so we cannot rely on it.
+            for (const s of deconv_sources.concat([rmsd_source, cluster_source])) {
+                const al = s.data['alpha'];
+                for (let i = 0; i < al.length; i++) al[i] = 1;
+                s.change.emit();
+            }
+            if (window.dvRender) window.dvRender();
+            else if (state_src.data['view'][0] === 'clusters') side_div.text = legend_html[idx];
             """))
         cluster_controls_children = [Div(text="<b>Clustering:</b>", width=320),
                                      clustering_toggle] + cluster_controls_children
