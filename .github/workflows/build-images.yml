@@ -1,0 +1,99 @@
+name: build-images
+
+# Build the custom container images and push them to the cbib org on GHCR, so the
+# pipeline is turnkey (Singularity pulls them automatically — no local build / fakeroot).
+#
+#   ghcr.io/cbib/deconvolista-visu        <- subworkflows/visualization/Dockerfile
+#   ghcr.io/cbib/deconvolista-bayesspace  <- subworkflows/clustering/Dockerfile
+#   ghcr.io/cbib/sp_rctd                  <- rctd/Dockerfile.cbib        (csangara + org.Hs.eg.db)
+#   ghcr.io/cbib/sp_nnls                  <- nnls/Dockerfile.cbib        (csangara + org.Hs.eg.db)
+#   ghcr.io/cbib/sp_spatialdwls           <- spatialdwls/Dockerfile.cbib (csangara + org.Hs.eg.db)
+#
+#   ghcr.io/cbib/sp_ddls                  <- ddls/Dockerfile.cbib (clean SpatialDDLS, GPU TensorFlow)
+#   ghcr.io/cbib/sp_cell2location         <- cell2location/Dockerfile.cbib (clean, torch cu128)
+#
+# The sp_rctd/nnls/spatialdwls images overlay the upstream csangara images to add org.Hs.eg.db,
+# missing upstream but required for human gene-symbol <-> Ensembl mapping (map_genes=true, GBMap).
+# sp_ddls and sp_cell2location are clean from-scratch rebuilds (no private/upstream base), replacing
+# the unoptimised docker://abderahim02/sp_ddls and the lab's private cell2location image.
+# NB: these two are large GPU images (~9-10 GB: CUDA + torch/TensorFlow are incompressible) — but the
+# runner builds AND pushes them, so nothing large transits the maintainer's connection.
+#
+# Auth: the CBIB_DECONVOLISTA_PACKAGE repo secret is a PAT with write:packages on the
+# cbib org (the default GITHUB_TOKEN may be blocked from creating org-level packages).
+#
+# Triggers on changes to the recipes (rebuilding the heavy images on *every* commit would
+# be wasteful), or manually via the "Run workflow" button (workflow_dispatch).
+
+on:
+  push:
+    branches: [main, cleanup/remove-nextflow]
+    paths:
+      - 'subworkflows/visualization/Dockerfile'
+      - 'subworkflows/clustering/Dockerfile'
+      - 'subworkflows/deconvolution/*/Dockerfile.cbib'
+      - '.github/workflows/build-images.yml'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  ORG: cbib
+
+jobs:
+  # --- Build the two custom images from their Dockerfiles ---
+  build:
+    runs-on: ubuntu-latest
+    # Grant the job's GITHUB_TOKEN package-write (needed if it ever pushes via GITHUB_TOKEN;
+    # harmless with the PAT). The Dockerfiles also carry an image.source LABEL so the package
+    # is auto-linked to this repo.
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: deconvolista-visu
+            context: subworkflows/visualization
+            file: subworkflows/visualization/Dockerfile
+          - name: deconvolista-bayesspace
+            context: subworkflows/clustering
+            file: subworkflows/clustering/Dockerfile
+          - name: sp_rctd
+            context: subworkflows/deconvolution/rctd
+            file: subworkflows/deconvolution/rctd/Dockerfile.cbib
+          - name: sp_nnls
+            context: subworkflows/deconvolution/nnls
+            file: subworkflows/deconvolution/nnls/Dockerfile.cbib
+          - name: sp_spatialdwls
+            context: subworkflows/deconvolution/spatialdwls
+            file: subworkflows/deconvolution/spatialdwls/Dockerfile.cbib
+          - name: sp_ddls
+            context: subworkflows/deconvolution/ddls
+            file: subworkflows/deconvolution/ddls/Dockerfile.cbib
+          - name: sp_cell2location
+            context: subworkflows/deconvolution/cell2location
+            file: subworkflows/deconvolution/cell2location/Dockerfile.cbib
+    steps:
+      - uses: actions/checkout@v4
+      # Free ~20 GB of preinstalled tooling: the R/Bioconductor images compile many deps from source
+      # (org.Hs.eg.db, BayesSpace, SpatialDDLS) on large base images and exhaust the runner's ~14 GB.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/lib/android \
+                      /opt/hostedtoolcache/CodeQL /usr/local/share/boost /opt/hostedtoolcache/go
+          sudo docker image prune -af || true
+          df -h /
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.CBIB_DECONVOLISTA_PACKAGE }}
+      - name: Build and push ${{ matrix.name }}
+        uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ env.ORG }}/${{ matrix.name }}:latest

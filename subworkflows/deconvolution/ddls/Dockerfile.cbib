@@ -1,0 +1,137 @@
+# Minimal, maintainable SpatialDDLS image (replaces the ~10 GB upstream one).
+#
+# MULTI-STAGE rationale (measured):
+#   bioconductor/bioconductor_docker:RELEASE_3_20 = 6.56 GB  (RStudio + full build tooling)
+#   rocker/r-ver:4.4.2                            = 1.36 GB  (same R 4.4.2, same Ubuntu 24.04 noble)
+# Both ship the identical R build on the identical OS, so packages compiled in the bioconductor
+# BUILDER load unchanged on the rocker RUNTIME. We get bioconductor's one-shot binary install of the
+# SpatialDDLS dependency tree (SingleCellExperiment, SpatialExperiment, zinbwave, scran, Seurat, ...)
+# WITHOUT carrying the 5 GB of RStudio/build tooling into the final image.
+#
+# GPU TensorFlow lives in a plain Python venv at /opt/conda/envs/myenv (the path hardcoded in
+# ddls/script.R via reticulate::use_python). tensorflow[and-cuda] ships the CUDA 12 runtime as
+# nvidia-*-cu12 wheels, so NO multi-GB system cuda-toolkit (the host driver via `singularity --nv`
+# is enough) and a modern TF carries native H100 (sm_90) kernels.
+#
+# Published to ghcr.io/cbib/sp_ddls.
+
+# =============================== BUILDER ====================================
+FROM bioconductor/bioconductor_docker:RELEASE_3_20 AS builder
+
+# R stack. Bioconductor deps first (the base has the Bioc repos preconfigured) -- this is the heavy
+# step, kept in its own layer so it stays cached while we iterate on the SpatialDDLS install below.
+RUN R -e "BiocManager::install(c('SingleCellExperiment','SpatialExperiment','SummarizedExperiment','S4Vectors','zinbwave','scran','scuttle','Seurat','reticulate','org.Hs.eg.db'), ask=FALSE, update=FALSE)"
+
+# SpatialDDLS was archived on CRAN, so install its last version (1.0.3) from the CRAN archive via
+# remotes. Its only dependency missing from the P3M repo is 'grr' (also archived), so install that
+# from the archive first; every other import (keras/tensorflow R interfaces, gtools, FNN, ...) is on P3M.
+RUN R -e "install.packages(c('remotes','R.utils','stringr'))" \
+ && R -e "remotes::install_version('grr', upgrade='never'); \
+          remotes::install_version('SpatialDDLS', version='1.0.3', upgrade='never'); \
+          if (!requireNamespace('SpatialDDLS', quietly=TRUE)) quit(status=1)"
+
+# GPU TensorFlow in a venv at the path ddls/script.R expects (no Miniconda -> no ToS prompt).
+RUN apt-get update && apt-get install -y --no-install-recommends python3-venv python3-pip \
+    && rm -rf /var/lib/apt/lists/* \
+ && python3 -m venv /opt/conda/envs/myenv \
+ && /opt/conda/envs/myenv/bin/pip install --no-cache-dir --upgrade pip \
+ && /opt/conda/envs/myenv/bin/pip install --no-cache-dir "tensorflow[and-cuda]==2.16.1"
+
+# Two venv fixups required by SpatialDDLS 1.0.3 on this modern stack:
+#  1. tf-keras: TF 2.16 bundles Keras 3, but SpatialDDLS builds its model with the Keras 2 Sequential
+#     API (Keras 3 rejects it: "Only input tensors may be passed as positional arguments"). Installing
+#     tf-keras + setting TF_USE_LEGACY_KERAS=1 (runtime stage) routes tf.keras back to Keras 2.
+#  2. distutils: Python 3.12 dropped the stdlib 'distutils' (PEP 632), but TF's deprecated
+#     tf.test.is_gpu_available() (called by ddls/script.R) still imports it. setuptools <= 69 carries a
+#     vendored distutils; its .pth shim alone is NOT enough because reticulate's embedded interpreter
+#     doesn't execute site .pth files -- so we MATERIALISE a real top-level `distutils` package (a copy
+#     of setuptools' vendored one, self-contained), which resolves on sys.path regardless.
+RUN set -eux; SP=$(echo /opt/conda/envs/myenv/lib/python3*/site-packages); \
+    /opt/conda/envs/myenv/bin/pip install --no-cache-dir "setuptools==69.5.1" "tf-keras==2.16.0"; \
+    cp -r "$SP/setuptools/_distutils" "$SP/distutils"
+
+# Trim the venv: headers, bundled tests and pyc caches are not needed at runtime; and drop the
+# NCCL library (.so kept out, package dir kept importable) -- NCCL only powers multi-GPU collective
+# ops, never exercised by single-GPU SpatialDDLS training, so this is a safe ~210 MB saving.
+RUN set -eux; V=$(echo /opt/conda/envs/myenv/lib/python3*/site-packages); \
+    rm -rf "$V/tensorflow/include"; \
+    rm -f "$V"/nvidia/nccl/lib/*.so*; \
+    find "$V" -name '*.pyc' -delete; \
+    find "$V" -type d -name '__pycache__' -prune -exec rm -rf {} +; \
+    find "$V" -depth -type d -name 'tests' -prune -exec rm -rf {} + || true; \
+    find "$V" -name '*.so' -exec strip --strip-unneeded {} + 2>/dev/null || true
+
+# =============================== RUNTIME ====================================
+FROM rocker/r-ver:4.4.2
+
+LABEL org.opencontainers.image.source=https://github.com/cbib/DeconvoliSTa
+
+# Route tf.keras (used by SpatialDDLS via the R keras/tensorflow packages) to the Keras 2 backport
+# (tf-keras, installed in the venv) instead of TF 2.16's bundled Keras 3, which is API-incompatible
+# with SpatialDDLS 1.0.3. Inherited by reticulate's in-process Python (same env as the R session).
+ENV TF_USE_LEGACY_KERAS=1
+
+# Runtime shared libraries the copied R packages link against, plus python3 to back the copied TF
+# venv. This exact set was derived empirically: `ldd` over every .so in the builder's site-library,
+# each lib mapped to its providing apt package via `dpkg -S`. Ubuntu 24.04 (noble) uses the t64
+# names. apt resolves transitive deps, so a few leaf libs cover their whole sub-tree.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        python3 \
+        libpython3.12t64 \
+        libopenblas0-pthread \
+        libgfortran5 \
+        libxml2 \
+        libcurl4t64 \
+        libssl3t64 \
+        libglpk40 \
+        libgomp1 \
+        libicu74 \
+        libpng16-16t64 \
+        libtiff6 \
+        libjpeg-turbo8 \
+        libfreetype6 \
+        libfontconfig1 \
+        libharfbuzz0b \
+        libgraphite2-3 \
+        libfribidi0 \
+        libglib2.0-0t64 \
+        libgmp10 \
+        libfftw3-double3 \
+        libmagick++-6.q16-9t64 \
+        libx11-6 \
+        libxext6 \
+        libamd3 \
+        libcolamd3 \
+        libsuitesparseconfig7 \
+        libgnutls30t64 \
+        zlib1g \
+        libbz2-1.0 \
+        liblzma5 \
+        libzstd1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy the R packages and the GPU TensorFlow venv from the builder. Same R 4.4.2 + same noble base
+# => the compiled .so files resolve against rocker's identical R and the system libs installed above.
+COPY --from=builder /usr/local/lib/R/site-library /usr/local/lib/R/site-library
+COPY --from=builder /opt/conda/envs/myenv /opt/conda/envs/myenv
+
+# Make the CUDA runtime libs from the nvidia-*-cu12 wheels discoverable by the dynamic linker. TF
+# preloads libcudart itself but then dlopen()s libcublas/libcudnn/libcufft/... by soname; without this
+# they are "not found" and TF silently falls back to CPU ("Cannot dlopen some GPU libraries"). Baking
+# them into the ld.so cache (not just LD_LIBRARY_PATH) survives Singularity's --nv env handling.
+RUN ls -d /opt/conda/envs/myenv/lib/python3*/site-packages/nvidia/*/lib > /etc/ld.so.conf.d/zz-tf-cuda.conf \
+ && ldconfig
+
+# SpatialDDLS 1.0.3 <-> tf-keras 2.16 S4 fix: its `KerasOrList` union only knows the pre-2.13 keras
+# class name, so the DeconvDLModel @model slot rejects tf-keras 2.16's keras.src.engine.* models.
+# Append a hook (fires on library(SpatialDDLS)) that registers those classes and widens the union.
+# Appended to rocker's Rprofile.site (which sets the P3M repo) so it is sourced by every Rscript run.
+COPY keras_compat.Rprofile /tmp/keras_compat.Rprofile
+RUN cat /tmp/keras_compat.Rprofile >> /usr/local/lib/R/etc/Rprofile.site && rm /tmp/keras_compat.Rprofile
+
+# Build-time sanity: R stack loads, the TF backend imports, the materialised distutils resolves the way
+# reticulate sees it (no site .pth), and a representative CUDA lib is now dlopen-able by soname.
+RUN R -e "library(SpatialDDLS); library(Seurat); library(SpatialExperiment); library(SingleCellExperiment); library(reticulate); library(org.Hs.eg.db); cat('R stack OK\n')" \
+ && /opt/conda/envs/myenv/bin/python -c "import tensorflow as tf; print('TF', tf.__version__)" \
+ && /opt/conda/envs/myenv/bin/python -S -c "import sys,glob; sys.path.insert(0, glob.glob('/opt/conda/envs/myenv/lib/python3*/site-packages')[0]); import distutils, distutils.version; print('distutils OK')" \
+ && /opt/conda/envs/myenv/bin/python -c "import ctypes; ctypes.CDLL('libcublas.so.12'); ctypes.CDLL('libcudnn.so.8'); print('CUDA libs dlopen OK')"

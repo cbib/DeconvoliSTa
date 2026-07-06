@@ -1,0 +1,13 @@
+Bootstrap: docker
+From: csangara/sp_spatialdwls:latest
+
+# Overlay on the published benchmark image to add org.Hs.eg.db, which is
+# missing upstream and required for human gene-symbol mapping at runtime.
+# We overlay instead of rebuilding from the from-scratch Dockerfile because
+# that Dockerfile pins the now-dead MRAN snapshot and compiles Giotto from a
+# GitHub commit, which no longer builds reliably.
+# Build:  singularity build --fakeroot sp_spatialdwls_cbib.sif spatialdwls.def
+
+%post
+    R -e "if (!requireNamespace('BiocManager', quietly=TRUE)) install.packages('BiocManager', repos='https://cloud.r-project.org'); BiocManager::install('org.Hs.eg.db', ask=FALSE, update=FALSE)"
+    R -e "library(org.Hs.eg.db); cat('org.Hs.eg.db OK\n')"

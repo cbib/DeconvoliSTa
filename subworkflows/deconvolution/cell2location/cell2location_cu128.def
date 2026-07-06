@@ -1,0 +1,29 @@
+Bootstrap: localimage
+From: sp_cell2location_h100.sif
+
+# Overlay on the lab's cell2location image (sp_cell2location_h100.sif) to replace
+# torch 2.11.0+cu130 (CUDA 13.0, incompatible with 570-series NVIDIA drivers /
+# CUDA 12.8) with the SAME torch 2.11.0 built for CUDA 12.8 (cu128). No other package
+# is touched: scvi-tools / cell2location / lightning stay identical.
+#
+# The base image (sp_cell2location_h100.sif) is the lab's private image, not on a
+# registry: place it in the build directory (or adjust the From: path above).
+# Build (needs internet + fakeroot):
+#   singularity build --fakeroot sp_cell2location_cu128.sif cell2location_cu128.def
+
+%post
+    PIP=/opt/conda/envs/cell2loc_env/bin/pip
+    PY=/opt/conda/envs/cell2loc_env/bin/python
+
+    # Replace torch with the cu128 build (CUDA 12.8). The pytorch index provides
+    # torch + its nvidia-*-cu12 libs; PyPI covers the pure-python deps.
+    $PIP install --force-reinstall --no-cache-dir \
+        torch==2.11.0+cu128 \
+        --index-url https://download.pytorch.org/whl/cu128 \
+        --extra-index-url https://pypi.org/simple
+
+    # Check the CUDA build is 12.8 (is_available can only be tested on a real GPU)
+    $PY -c "import torch; print('torch', torch.__version__, '| cuda build', torch.version.cuda)"
+
+%test
+    /opt/conda/envs/cell2loc_env/bin/python -c "import torch; assert torch.version.cuda.startswith('12.8'), torch.version.cuda; print('OK torch cuda', torch.version.cuda)"

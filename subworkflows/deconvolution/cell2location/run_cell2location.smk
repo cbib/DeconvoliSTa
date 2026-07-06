@@ -1,0 +1,173 @@
+import os
+import yaml
+import time
+
+# Read the YAML configuration file
+with open("subworkflows/deconvolution/cell2location/config.yaml", "r") as config_file:
+    params = yaml.safe_load(config_file)
+
+# Function to get the file basename (without extension)
+def get_basename(file_path):
+    return os.path.splitext(os.path.basename(file_path))[0]
+
+# Helper function to check if a config variable is present
+def get_config_var(config, var_name, default=None):
+    if var_name not in config:
+        if default is None:
+            raise ValueError(f"Error: '{var_name}' is missing in the configuration file.")
+        else:
+            print(f"Warning: '{var_name}' is missing in the configuration file. Using default: {default}")
+            return default
+    return config[var_name]
+
+# Load the required configuration parameters
+sc_input = get_config_var(config, "sc_input")
+sp_input = get_config_var(config, "sp_input")
+output_dir = get_config_var(config, "output")
+output_suffix = get_basename(sp_input)
+runID_props = get_config_var(params, "runID_props")
+method = "cell2location"
+formatted_output = f"{output_dir}/proportions_{method}_{output_suffix}{runID_props}.tsv"
+use_gpu = get_config_var(config, "use_gpu", "false")
+annot = get_config_var(config, "annot", get_config_var(params, "annot"))
+map_genes = get_config_var(config, "map_genes", "false")
+
+# Absolute path to the R script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+convert_script = "subworkflows/deconvolution/convertBetweenRDSandH5AD.R"
+load_model = get_config_var(config, "load_model", "false") == 'true'
+
+# cbib image on GHCR: clean build with torch cu128 (needed for the 570-series GPU drivers / CUDA
+# 12.8 on Apollo) + pybiomart for map_genes. NB: ghcr-only for now to test the registry; the
+# local-sif override will be re-added later.
+c2l_image = "docker://ghcr.io/cbib/sp_cell2location:latest"
+
+
+if not load_model:
+    rule convertBetweenRDSandH5AD:
+        input:
+            sc_rds_file=sc_input,
+            sp_rds_file=sp_input
+        output:
+            sc_h5ad_file=temp(f"{get_basename(sc_input)}.h5ad"),
+            sp_h5ad_file=temp(f"{get_basename(sp_input)}.h5ad")
+        singularity:
+            "docker://csangara/seuratdisk:latest"
+        threads:
+            8
+        shell:
+            """
+            start_time=$(date +%s)
+            Rscript {convert_script} --input_path {input.sc_rds_file} --annot {annot}
+            Rscript {convert_script} --input_path {input.sp_rds_file} --annot {annot}
+            end_time=$(date +%s)
+            elapsed_time=$((end_time - start_time))
+            echo "convertBetweenRDSandH5AD took $elapsed_time seconds"
+            """
+    rule build_cell2location:
+        input:
+            rules.convertBetweenRDSandH5AD.output.sc_h5ad_file,
+            rules.convertBetweenRDSandH5AD.output.sp_h5ad_file
+        output:
+            temp(f"{output_dir}/sc_{get_basename(sc_input)}_{get_basename(sp_input)}.h5ad")
+        singularity:
+            c2l_image
+        threads:
+            8
+        resources:
+            nvidia_gpu = 1 if use_gpu == "true" else 0,
+            slurm_partition = "gpu" if use_gpu == "true" else "compute"
+        shell:
+            """
+            start_time=$(date +%s)
+            /opt/conda/envs/cell2loc_env/bin/python subworkflows/deconvolution/cell2location/run_build.py {input[0]} {input[1]} {output_dir} {use_gpu} {annot}
+            end_time=$(date +%s)
+            elapsed_time=$((end_time - start_time))
+            echo "build_cell2location took $elapsed_time seconds"
+            """
+    rule fit_cell2location:
+        input:
+            rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
+            model= rules.build_cell2location.output
+        output:
+            temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
+        singularity:
+            c2l_image
+        threads:
+            8
+        resources:
+            nvidia_gpu = 1 if use_gpu == "true" else 0,
+            slurm_partition = "gpu" if use_gpu == "true" else "compute"
+        shell:
+            """
+            start_time=$(date +%s)
+            /opt/conda/envs/cell2loc_env/bin/python subworkflows/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu} {map_genes}
+            end_time=$(date +%s)
+            elapsed_time=$((end_time - start_time))
+            echo "fit_cell2location took $elapsed_time seconds"
+            """
+else:
+    rule convertBetweenRDSandH5AD:
+        input:
+            sp_rds_file=sp_input
+        output:
+            sp_h5ad_file=temp(f"{get_basename(sp_input)}.h5ad")
+        singularity:
+            "docker://csangara/seuratdisk:latest"
+        threads:
+            8
+        shell:
+            """
+            start_time=$(date +%s)
+            Rscript {convert_script} --input_path {input.sp_rds_file} --annot {annot}
+            end_time=$(date +%s)
+            elapsed_time=$((end_time - start_time))
+            echo "convertBetweenRDSandH5AD took $elapsed_time seconds"
+            """
+    model_path  = config.get("model_path")
+    rule fit_cell2location:
+        input:
+            rules.convertBetweenRDSandH5AD.output.sp_h5ad_file,
+            model = model_path
+        output:
+            temp(f"{output_dir}/proportions_cell2location_{output_suffix}{runID_props}.preformat")
+        singularity:
+            c2l_image
+        threads:
+            8
+        resources:
+            nvidia_gpu = 1 if use_gpu == "true" else 0,
+            slurm_partition = "gpu" if use_gpu == "true" else "compute"
+        shell:
+            """
+            start_time=$(date +%s)
+            /opt/conda/envs/cell2loc_env/bin/python subworkflows/deconvolution/cell2location/run_fit.py {input[0]} {input[1]} {output_dir} {use_gpu} {map_genes}
+            end_time=$(date +%s)
+            elapsed_time=$((end_time - start_time))
+            echo "fit_cell2location took $elapsed_time seconds"
+            """
+
+
+
+rule format_tsv_file:
+    input:
+        tsv_file=rules.fit_cell2location.output
+    output:
+        formatted_output
+    singularity:
+        "docker://rocker/tidyverse:latest"
+    threads:
+        8
+    shell:
+        """
+        start_time=$(date +%s)
+        Rscript -e "
+        deconv_matrix <- read.table('{input.tsv_file}', sep='\t', header=TRUE, row.names=1);
+        colnames(deconv_matrix) <- stringr::str_replace_all(colnames(deconv_matrix), '[/. ]', '');
+        deconv_matrix <- deconv_matrix[,sort(colnames(deconv_matrix), method='shell')];
+        write.table(deconv_matrix, file='{output}', sep='\t', quote=FALSE, row.names=TRUE);
+        "
+        end_time=$(date +%s)
+        elapsed_time=$((end_time - start_time))
+        echo "format_tsv_file took $elapsed_time seconds "
+        """

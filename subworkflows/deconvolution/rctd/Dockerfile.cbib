@@ -1,0 +1,13 @@
+# cbib overlay of csangara/sp_rctd that adds org.Hs.eg.db (missing upstream, required for
+# human gene-symbol <-> Ensembl mapping when map_genes=true, e.g. the GBMap reference).
+# Published to ghcr.io/cbib/sp_rctd by .github/workflows/build-images.yml.
+FROM csangara/sp_rctd:latest
+
+LABEL org.opencontainers.image.source=https://github.com/cbib/DeconvoliSTa
+
+# NB: rctd's csangara base is R 4.4 (unlike nnls/spatialdwls which are R 4.1) -> Bioconductor 3.20.
+# Pin it explicitly so the install is reproducible and actually fetches org.Hs.eg.db (the latest
+# BiocManager would target a devel Bioc and silently install nothing).
+RUN R -e "if (!requireNamespace('BiocManager', quietly=TRUE)) install.packages('BiocManager', repos='https://cloud.r-project.org'); \
+    BiocManager::install('org.Hs.eg.db', version='3.20', ask=FALSE, update=FALSE)" \
+ && R -e "library(org.Hs.eg.db); cat('org.Hs.eg.db OK\n')"

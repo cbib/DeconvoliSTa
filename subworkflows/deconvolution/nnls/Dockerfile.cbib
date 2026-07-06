@@ -1,0 +1,14 @@
+# cbib overlay of csangara/sp_nnls that adds org.Hs.eg.db (missing upstream, required for
+# human gene-symbol <-> Ensembl mapping when map_genes=true, e.g. the GBMap reference).
+# Docker equivalent of nnls.def -> published to ghcr.io/cbib/sp_nnls by the build workflow.
+FROM csangara/sp_nnls:latest
+
+LABEL org.opencontainers.image.source=https://github.com/cbib/DeconvoliSTa
+
+# Pin Bioconductor 3.14 (the release for the base image's R 4.1) + a dated CRAN snapshot, so the
+# install is reproducible and actually fetches org.Hs.eg.db (the latest BiocManager targets a Bioc
+# version incompatible with R 4.1 and silently installs nothing).
+RUN R -e "options(repos=c(CRAN='https://packagemanager.posit.co/cran/2022-10-01')); \
+    if (!requireNamespace('BiocManager', quietly=TRUE)) install.packages('BiocManager'); \
+    BiocManager::install('org.Hs.eg.db', version='3.14', ask=FALSE, update=FALSE)" \
+ && R -e "library(org.Hs.eg.db); cat('org.Hs.eg.db OK\n')"

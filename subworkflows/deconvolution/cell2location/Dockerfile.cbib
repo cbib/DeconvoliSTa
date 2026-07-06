@@ -1,0 +1,32 @@
+# Clean cell2location image — built from scratch (no private lab base), 100% pip/conda.
+#
+# The run scripts do `source activate cell2loc_env && python ...`, so the image ships a conda env
+# named cell2loc_env. We base on Miniforge (conda-forge channel) to avoid Miniconda's interactive
+# Terms-of-Service prompt. cell2location pulls scvi-tools / anndata / torch (CUDA wheels bring the
+# CUDA runtime -> no system CUDA needed; the host driver via `singularity --nv` is enough).
+# pybiomart is needed for gene-symbol <-> Ensembl mapping (map_genes=true, e.g. GBMap).
+#
+# Published to ghcr.io/cbib/sp_cell2location.
+FROM condaforge/miniforge3:latest
+
+LABEL org.opencontainers.image.source=https://github.com/cbib/DeconvoliSTa
+
+RUN mamba create -y -n cell2loc_env python=3.11 && mamba clean -afy
+
+# Install torch built for CUDA 12.8 FIRST: the default PyPI torch is cu130 (CUDA 13), which the
+# Apollo 570-series driver (CUDA 12.8 max) cannot run. Installing the cu128 wheel first pins it so
+# cell2location/scvi reuse it instead of pulling cu130.
+RUN /opt/conda/envs/cell2loc_env/bin/pip install --no-cache-dir \
+        torch --index-url https://download.pytorch.org/whl/cu128
+
+# cell2location (+ scvi-tools, anndata as deps; torch already satisfied) + scanpy + pybiomart.
+# pyyaml: the run scripts `import yaml`.
+RUN /opt/conda/envs/cell2loc_env/bin/pip install --no-cache-dir \
+        cell2location scanpy pybiomart matplotlib pyyaml
+
+# Build-time sanity: the stack imports AND torch is the CUDA 12.8 build (Apollo-compatible).
+RUN /opt/conda/envs/cell2loc_env/bin/python -c \
+    "import cell2location, scvi, scanpy, anndata, pybiomart, yaml, torch; \
+     assert torch.version.cuda and torch.version.cuda.startswith('12.8'), 'torch CUDA != 12.8: '+str(torch.version.cuda); \
+     print('cell2location', cell2location.__version__, '| scvi', scvi.__version__, \
+           '| torch', torch.__version__, '| cuda', torch.version.cuda)"

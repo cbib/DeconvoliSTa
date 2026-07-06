@@ -1,0 +1,246 @@
+#!/usr/bin/env bash
+# =============================================================================
+# DeconvoliSTa — single launcher.
+#
+# Pick any set of methods; the launcher auto-routes each to the right hardware (CPU vs
+# GPU), runs them (GPU methods in parallel), and — unless --no-visu — runs the interactive
+# visualization after the deconvolutions succeed. On SLURM it submits the jobs (with an
+# afterok dependency for the visu); without SLURM (or with --local) it runs here directly.
+#
+# Before running anything it prints a full execution plan (inputs, routing, SLURM params,
+# the snakemake command) and asks for confirmation (skip with --yes; preview with --dry-run).
+#
+#   ./deconvolista                                # interactive menu
+#   ./deconvolista --methods nnls,cell2location   # non-interactive
+#   ./deconvolista --methods ddls --no-visu
+#   ./deconvolista --local --methods rctd         # run here, no SLURM
+#   ./deconvolista --dry-run --methods rctd       # print the plan, run nothing
+#   ./deconvolista --help
+#
+# Methods are auto-discovered: any subworkflows/deconvolution/<m>/run_<m>.smk is a valid
+# method, and its method.env (USE_GPU=true|false) decides CPU vs GPU. Adding a method =
+# drop its folder + method.env; nothing to edit here.
+#
+# Prerequisite: cp config.env.example config.env && edit it for your environment.
+# =============================================================================
+set -euo pipefail
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+export CONFIG_FILE="${CONFIG_FILE:-$SCRIPT_DIR/config.env}"
+
+[[ -f "$CONFIG_FILE" ]] || {
+  echo "ERROR: $CONFIG_FILE not found. -> cp config.env.example config.env && edit it." >&2; exit 1; }
+source "$CONFIG_FILE"
+
+# --- Method discovery -------------------------------------------------------
+# Scan subworkflows/deconvolution/<m>/run_<m>.smk; read USE_GPU from each method.env
+# (default false). Populates ALL_METHODS (order: alphabetical) and IS_GPU[method].
+declare -a ALL_METHODS=()
+declare -A IS_GPU=()
+for smk in "$SCRIPT_DIR"/subworkflows/deconvolution/*/run_*.smk; do
+  [[ -e "$smk" ]] || continue
+  d="$(dirname "$smk")"; m="$(basename "$d")"
+  [[ "$(basename "$smk")" == "run_${m}.smk" ]] || continue
+  ALL_METHODS+=("$m")
+  IS_GPU["$m"]="false"
+  if [[ -f "$d/method.env" ]]; then IS_GPU["$m"]="$(. "$d/method.env"; echo "${USE_GPU:-false}")"; fi
+done
+[[ ${#ALL_METHODS[@]} -gt 0 ]] || { echo "ERROR: no methods found under subworkflows/deconvolution/." >&2; exit 1; }
+
+is_known_method() { local x; for x in "${ALL_METHODS[@]}"; do [[ "$x" == "$1" ]] && return 0; done; return 1; }
+
+usage() {
+  cat >&2 <<EOF
+Usage: ./deconvolista [options]    (no options -> interactive menu)
+  --methods m1,m2,...   methods to run, auto-routed CPU/GPU. Available: ${ALL_METHODS[*]}
+  --visu | --no-visu    build the interactive visualization (default: ${DO_VISU:-true})
+  --bayes-q Q           BayesSpace q for the visu clustering (default: ${BAYES_Q:-auto})
+  --sc FILE             scRNA-seq reference (default from config.env: ${SC_INPUT:-unset})
+  --sp FILE             spatial sample      (default from config.env: ${SP_INPUT:-unset})
+  --annot NAME          cell-type annotation column (default: ${ANNOT:-unset})
+  --local               run directly here (one snakemake call, no sbatch). Auto-selected if
+                        sbatch is not found on this machine.
+  --yes, -y             skip the "Continue?" confirmation (for scripts)
+  --dry-run             print the execution plan and exit without running anything
+  -h, --help            show this help
+EOF
+}
+
+# --- Parse CLI --------------------------------------------------------------
+methods=""; do_visu="${DO_VISU:-true}"; bayes_q="${BAYES_Q:-auto}"; dry_run="false"
+local_flag="false"; assume_yes="false"
+sc_override=""; sp_override=""; annot_override=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --methods) methods="$2"; shift 2;;
+    --visu)    do_visu="true"; shift;;
+    --no-visu) do_visu="false"; shift;;
+    --bayes-q) bayes_q="$2"; shift 2;;
+    --sc)      sc_override="$2"; shift 2;;
+    --sp)      sp_override="$2"; shift 2;;
+    --annot)   annot_override="$2"; shift 2;;
+    --local)   local_flag="true"; shift;;
+    -y|--yes)  assume_yes="true"; shift;;
+    --dry-run) dry_run="true"; shift;;
+    -h|--help) usage; exit 0;;
+    *) echo "ERROR: unknown option '$1'" >&2; usage; exit 1;;
+  esac
+done
+
+# SLURM unless --local, or unless sbatch is unavailable (then fall back to local).
+run_mode="slurm"
+if [[ "$local_flag" == "true" ]]; then run_mode="local"
+elif ! command -v sbatch >/dev/null 2>&1; then run_mode="local"; fi
+
+# --- Interactive menu when no methods were given ----------------------------
+default_methods="${DEFAULT_METHODS:-$(IFS=,; echo "${ALL_METHODS[*]}")}"
+if [[ -z "$methods" ]]; then
+  gpu_list=""
+  for m in "${ALL_METHODS[@]}"; do if [[ "${IS_GPU[$m]}" == "true" ]]; then gpu_list+="$m "; fi; done
+  {
+    echo "=== DeconvoliSTa — interactive launch ==="
+    echo
+    echo "1) Deconvolution methods to run (comma-separated)."
+    echo "   Each estimates, per Visium spot, the proportion of every cell type."
+    echo "   Available: ${ALL_METHODS[*]}"
+    echo "   GPU methods (each gets its own GPU job): ${gpu_list:-none}"
+  } >&2
+  read -rp "   Methods [$default_methods]: " methods
+  methods="${methods:-$default_methods}"
+  {
+    echo
+    echo "2) Visualization: build the interactive HTML (tissue image + proportions + spot clusters)."
+  } >&2
+  read -rp "   Generate the visualization? [Y/n]: " _v
+  [[ "$_v" =~ ^[Nn] ]] && do_visu="false" || do_visu="true"
+  if [[ "$do_visu" == "true" ]]; then
+    {
+      echo
+      echo "3) BayesSpace q = number of spatial regions to split the tissue into (spot clustering)."
+      echo "   'auto' = the algorithm picks the number itself (slower); or give a number, e.g. 9."
+    } >&2
+    read -rp "   BayesSpace q [$bayes_q]: " _q; bayes_q="${_q:-$bayes_q}"
+  fi
+fi
+methods="${methods// /}"   # strip spaces
+
+# --- Classify into CPU group + GPU methods (validating each) ----------------
+cpu_methods=(); gpu_methods=()
+IFS=',' read -ra _arr <<< "$methods"
+for m in "${_arr[@]}"; do
+  [[ -z "$m" ]] && continue
+  is_known_method "$m" || { echo "ERROR: unknown method '$m'. Available: ${ALL_METHODS[*]}" >&2; exit 1; }
+  if [[ "${IS_GPU[$m]}" == "true" ]]; then gpu_methods+=("$m"); else cpu_methods+=("$m"); fi
+done
+[[ ${#cpu_methods[@]} -eq 0 && ${#gpu_methods[@]} -eq 0 ]] && { echo "ERROR: no methods selected." >&2; exit 1; }
+
+# Inputs: config.env defaults, overridable by flags. Exported so the job sees them.
+export SC_INPUT="${sc_override:-${SC_INPUT:-unit-test/test_sc_data.rds}}"
+export SP_INPUT="${sp_override:-${SP_INPUT:-unit-test/test_sp_data.rds}}"
+export ANNOT="${annot_override:-${ANNOT:-subclass}}"
+export BAYES_Q="$bayes_q"
+export SKIP_METRICS="${SKIP_METRICS:-true}"
+export MAP_GENES="${MAP_GENES:-false}"
+
+cpu_csv="$(IFS=,; echo "${cpu_methods[*]}")"
+any_gpu="false"; [[ ${#gpu_methods[@]} -gt 0 ]] && any_gpu="true"
+
+# The equivalent non-interactive command (so the menu teaches the flags).
+if [[ "$do_visu" == "true" ]]; then eq="./deconvolista --methods $methods --visu --bayes-q $bayes_q"
+else eq="./deconvolista --methods $methods --no-visu"; fi
+[[ "$run_mode" == "local" && "$local_flag" == "true" ]] && eq="$eq --local"
+
+# --- Transparent execution plan (shown before anything runs) ----------------
+print_plan() {
+  {
+    echo "=================== DeconvoliSTa — execution plan ==================="
+    if [[ "$run_mode" == "local" ]]; then
+      echo "Run mode:   LOCAL$( [[ "$local_flag" == "false" ]] && echo '  (sbatch not found -> running here)')"
+    else
+      echo "Run mode:   SLURM"
+    fi
+    echo "Inputs:     sc_input = $SC_INPUT"
+    echo "            sp_input = $SP_INPUT"
+    echo "            annot    = $ANNOT    map_genes = $MAP_GENES"
+    echo "Methods:    $methods"
+    if [[ "$do_visu" == "true" ]]; then echo "Visu:       yes (BayesSpace q=$bayes_q)"; else echo "Visu:       no"; fi
+    echo
+    if [[ "$run_mode" == "slurm" ]]; then
+      echo "SLURM jobs to submit:"
+      [[ ${#cpu_methods[@]} -gt 0 ]] && \
+        echo "  [CPU ] dcv_cpu    partition=$PARTITION_CPU mem=${MEM_CPU:-128G} time=${TIME_LIMIT:-24:00:00}   methods=$cpu_csv"
+      for m in "${gpu_methods[@]}"; do
+        echo "  [GPU ] dcv_gpu_$m    partition=$PARTITION_GPU mem=${MEM_GPU:-100G} gres=$GPU_GRES   methods=$m"
+      done
+      [[ "$do_visu" == "true" ]] && \
+        echo "  [VISU] dcv_visu   partition=$PARTITION_CPU mem=${MEM_VISU:-64G}   runs after the above (afterok)"
+    else
+      echo "Runs locally (one snakemake invocation, no scheduler):"
+      echo "  RUN_METHODS=$methods RUN_USE_GPU=$any_gpu RUN_DO_VISU=$do_visu  bash slurm_job.sh"
+    fi
+    echo
+    echo "Snakemake command each job runs (cores + per-job use_gpu/--nv filled at run time):"
+    echo "  snakemake -s main.smk --config mode=run_dataset methods=<...> \\"
+    echo "    sc_input=$SC_INPUT sp_input=$SP_INPUT annot=$ANNOT output=$OUTPUT_DIR sif_dir=$SIF_DIR \\"
+    echo "    use_gpu=<...> skip_metrics=$SKIP_METRICS map_genes=$MAP_GENES do_visu=<...> bayes_q=$BAYES_Q \\"
+    echo "    --use-singularity --singularity-args \"[--nv] --bind $DATA_BIND --bind $OUTPUT_DIR\" --keep-going"
+    echo
+    echo "Equivalent command: $eq"
+    echo "===================================================================="
+  } >&2
+}
+
+print_plan
+
+# --dry-run: show the plan and stop. Otherwise ask for confirmation (unless --yes).
+if [[ "$dry_run" == "true" ]]; then echo "(dry-run: nothing was run)" >&2; exit 0; fi
+if [[ "$assume_yes" != "true" ]]; then
+  read -rp "Continue? [Y/n]: " _go
+  [[ "$_go" =~ ^[Nn] ]] && { echo "Aborted — nothing was run." >&2; exit 0; }
+fi
+
+# --- LOCAL: one snakemake invocation (all methods together, no scheduler) ----
+if [[ "$run_mode" == "local" ]]; then
+  export RUN_METHODS="$methods" RUN_USE_GPU="$any_gpu" RUN_DO_VISU="$do_visu"
+  exec bash "$SCRIPT_DIR/slurm_job.sh"
+fi
+
+# --- SLURM: submit <jobname> <use_gpu> <do_visu> <methods_csv> [extra sbatch flags] ---
+mkdir -p "$LOG_DIR" 2>/dev/null || true
+submit() {
+  local jobname="$1" use_gpu="$2" do_v="$3" mlist="$4"; shift 4
+  local mem part want_gres="false"
+  if   [[ "$do_v"    == "true" ]]; then mem="${MEM_VISU:-64G}"; part="$PARTITION_CPU"
+  elif [[ "$use_gpu" == "true" ]]; then mem="${MEM_GPU:-100G}"; part="$PARTITION_GPU"; want_gres="true"
+  else                                  mem="${MEM_CPU:-128G}"; part="$PARTITION_CPU"; fi
+
+  # Per-job knobs as exported env (NOT --export=VAR=val: a comma-separated methods list would
+  # be split). --export=ALL forwards the whole environment.
+  export RUN_METHODS="$mlist" RUN_USE_GPU="$use_gpu" RUN_DO_VISU="$do_v"
+
+  local opts=(--parsable --job-name="$jobname"
+              --output="$LOG_DIR/%x_%j.out" --error="$LOG_DIR/%x_%j.err"
+              --partition="$part" --mem="$mem" --time="${TIME_LIMIT:-24:00:00}" --export=ALL)
+  [[ "$want_gres" == "true" ]] && opts+=(--gres="$GPU_GRES")
+  opts+=("$@")
+  sbatch "${opts[@]}" "$SCRIPT_DIR/slurm_job.sh"
+}
+
+# CPU job (all CPU methods) + one job per GPU method, then visu (afterok on all).
+deps=()
+if [[ ${#cpu_methods[@]} -gt 0 ]]; then
+  id=$(submit "dcv_cpu" false false "$cpu_csv"); deps+=("$id")
+  echo "  CPU ($cpu_csv): job $id" >&2
+fi
+for m in "${gpu_methods[@]}"; do
+  id=$(submit "dcv_gpu_$m" true false "$m"); deps+=("$id")
+  echo "  GPU ($m): job $id" >&2
+done
+if [[ "$do_visu" == "true" ]]; then
+  dep="afterok:$(IFS=:; echo "${deps[*]}")"
+  # --kill-on-invalid-dep=yes: if any deconvolution fails (afterok can never be satisfied), SLURM
+  # cancels the visu job instead of leaving it stuck forever in "DependencyNeverSatisfied".
+  id=$(submit "dcv_visu" false true "$methods" --dependency="$dep" --kill-on-invalid-dep=yes)
+  echo "  visualization (after the above): job $id" >&2
+fi
+
+echo "Submitted: methods=$methods, visu=$do_visu. Track with: squeue -u \$USER" >&2
