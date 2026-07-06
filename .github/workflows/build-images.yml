@@ -27,7 +27,7 @@ name: build-images
 
 on:
   push:
-    branches: [main, cleanup/remove-nextflow]
+    branches: [main, master]
     paths:
       - 'subworkflows/visualization/Dockerfile'
       - 'subworkflows/clustering/Dockerfile'
