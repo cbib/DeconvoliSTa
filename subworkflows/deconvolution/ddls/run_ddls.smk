@@ -41,6 +41,6 @@ rule run_ddls:
         """
         Rscript {ddls_script} \
             --sc_input {input.sc_input} --sp_input {input.sp_input} \
-            --output {output} --annot {annot} --epochs 20000 --batch_size 15 \
+            --output {output} --annot {annot} --epochs 400 --batch_size 15 \
             --use_gpu {use_gpu} --map_genes {map_genes}
         """
